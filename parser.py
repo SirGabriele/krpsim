@@ -28,9 +28,6 @@ class Parser:
                     self.parse_stock_line(line)
                     self.parse_process_line(line)
 
-                print(f"Parsed stock: {self.stock}")
-                print(f"Parsed processes: {[process.__str__() for process in self.processes]}")
-
         except FileNotFoundError:
             print("Input file not found")
             exit(1)

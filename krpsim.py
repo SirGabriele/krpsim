@@ -7,7 +7,6 @@ import sys
 from arg_parse.argparse_init import argparse_init
 from file_parsing.parser import parse
 
-
 def logging_init(debug: bool):
     """Configures logger format and level."""
     level = logging.DEBUG if debug else logging.INFO
@@ -16,7 +15,6 @@ def logging_init(debug: bool):
         level=level,
         format="%(asctime)s [%(levelname)s] %(name)s %(message)s"
     )
-
 
 def main() -> int:
     # Parser's configuration initialization
@@ -33,7 +31,6 @@ def main() -> int:
     stock, processes, to_optimize = parse(args.input_file)
 
     return 0
-
 
 if __name__ == '__main__':
     try:

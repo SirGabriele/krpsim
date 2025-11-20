@@ -21,5 +21,11 @@ class Stock:
     def get_quantity(self, resource: str) -> int:
         return self.stock.get(resource, 0)
 
+    def get_total_quantity(self) -> int:
+        return sum(self.stock.values())
+
+    def get_num_resources(self) -> int:
+        return len(self.stock)
+
     def __str__(self) -> str:
         return str(self.stock)

@@ -2,8 +2,6 @@ import random
 from typing import List
 
 from process import Process
-from Manager import Manager
-
 
 def choose_process(processes: List[Process], process_in_progress: dict[str, int], stock: dict[str, int]):
     for process in processes:

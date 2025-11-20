@@ -17,11 +17,11 @@ class TestParser(unittest.TestCase):
         captured_output = StringIO()
         expected = (
             "usage: python3.10 krpsim.py <input_file> <delay>\n"
-            f"krpsim.py: error: argument input_file: File 'non_existing_file.txt' does not exist"
+            "krpsim.py: error: argument input_file: File 'non_existing_file.txt' does not exist"
         )
 
         # When
-        with self.assertRaises(SystemExit) as cm:
+        with self.assertRaises(SystemExit):
             with redirect_stderr(captured_output):
                 main()
         actual = captured_output.getvalue().strip()
@@ -36,11 +36,11 @@ class TestParser(unittest.TestCase):
         captured_output = StringIO()
         expected = (
             "usage: python3.10 krpsim.py <input_file> <delay>\n"
-            f"krpsim.py: error: argument delay: invalid int value: 'delay'"
+            "krpsim.py: error: argument delay: invalid int value: 'delay'"
         )
 
         # When
-        with self.assertRaises(SystemExit) as cm:
+        with self.assertRaises(SystemExit):
             with redirect_stderr(captured_output):
                 main()
         actual = captured_output.getvalue().strip()

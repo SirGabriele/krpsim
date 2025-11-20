@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Dict
 
+
 @dataclass
 class Stock:
     inventory: Dict[str, int] = field(default_factory=dict)

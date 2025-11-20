@@ -18,7 +18,7 @@ dream_hour:(second:1;dream:2):(hour:1;dream:2):1
 dream_day:(second:1;dream:3):(day:1;dream:3):1
 end_dream:(dream:3):(clock:1):60
 #
-# optimize:(stock1;stock2;...)
+# optimize:(stock1|time;stock2|time;[...])
 #
-optimize:(year)
+optimize:(year|time)
 #

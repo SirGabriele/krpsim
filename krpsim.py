@@ -6,7 +6,6 @@ import traceback
 import sys
 import os
 
-from parsing.parsed_config import ParsedConfig
 from parsing.parser import parse
 
 
@@ -41,7 +40,7 @@ def main() -> int:
     configure_logging(args.debug)
 
     kr_config.DEBUG = args.debug
-    parsed_config: ParsedConfig = parse(args.input_file, args.delay)
+    stock, processes, to_optimize = parse(args.input_file, args.delay)
 
     return 0
 

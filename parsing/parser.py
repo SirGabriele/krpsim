@@ -1,9 +1,7 @@
 import re
-import logging
 
 from custom_exceptions.FileFormatError import FileFormatError
 from custom_exceptions.FileFormatOrderError import FileFormatOrderError
-from parsing.parsed_config import ParsedConfig
 from process import Process
 from stock import Stock
 
@@ -11,12 +9,12 @@ from stock import Stock
 ALLOWED_CHAR_EXPR = "\w+"
 NUMERIC_EXPR = "\d+"
 
-STOCK_PATTERN_EXPR = f"^(\w+):(\d+)$"
+STOCK_PATTERN_EXPR = "^(\w+):(\d+)$"
 PROCESS_PATTERN_EXPR = "^(\w+):(?:\((?:(\w+:\d+(?:;\w+:\d+)*))\))?:(?:\((?:(\w+:\d+(?:;\w+:\d+)*))\))?:(\d+)$"
-OPTIMIZE_PATTERN_EXPR = f"^(optimize):\((?:(\w+(?:;\w+)*))\)$"
+OPTIMIZE_PATTERN_EXPR = "^(optimize):\((?:(\w+\|time(?:;\w+\|time)*))\)$"
 
 
-def parse(input_file: str, delay: int) -> ParsedConfig:
+def parse(input_file: str, delay: int) -> tuple[Stock, list[Process], list[str]]:
     if not isinstance(input_file, str):
         raise TypeError("input_file must be an integer.")
     if not isinstance(delay, int):
@@ -66,7 +64,7 @@ def parse(input_file: str, delay: int) -> ParsedConfig:
         else:
             raise FileFormatError(line)
 
-    return ParsedConfig(stock, processes, to_optimize)
+    return stock, processes, to_optimize
 
 
 def parse_stock_line(stock_match: re.Match[str]) -> tuple[str, int] | None:
@@ -89,7 +87,8 @@ def parse_process_line(stock_match: re.Match[str]) -> Process | None:
 
 def parse_optimize_line(optimize_match: re.Match[str]) -> list[str] | None:
     # Names of stocks to optimize are in the second group in <optimize:(stock1;stock2)>
-    return optimize_match.group(2).split(';')
+    names = optimize_match.group(2).split(';')
+    return names
 
 
 def parse_resource_quantity_list(rq_list_str: str) -> dict:

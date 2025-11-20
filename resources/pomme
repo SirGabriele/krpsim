@@ -4,6 +4,8 @@
 four:10
 euro:10000
 #
+# process   name:(need1:qty1;need2:qty2;[...]):(result1:qty1;result2:qty2;[...]):delay
+#
 buy_pomme:(euro:100):(pomme:700):200
 buy_citron:(euro:100):(citron:400):200
 buy_oeuf:(euro:100):(oeuf:100):200
@@ -25,7 +27,7 @@ vente_tarte_citron:(tarte_citron:10):(euro:200):30
 vente_flan:(flan:10):(euro:300):30
 #do_benef:(euro:1):(benefice:1):0
 #
+# optimize:(stock1;stock2;...)
 #
-#optimize:(benefice)
 optimize:(euro)
 #

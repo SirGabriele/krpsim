@@ -13,9 +13,7 @@ parier_avec_un_copain:(bonbon:2;moi:1):(moi:1;bonbon:3):10
 parier_avec_un_autre_copain:(moi:1;bonbon:2):(moi:1;bonbon:1):10
 se_battre_dans_la_cours:(moi:1):(moi:1;bonbon:1):50
 #
-# optimize time for no process possible (eating stock, produce all possible),
-# or maximize some products over a long delay
-# optimize:(time|stock1;time|stock2;...)
+# optimize:(stock1|time;stock2|time;[...])
 #
-optimize:(marelle)
+optimize:(marelle|time)
 #

@@ -1,18 +1,14 @@
+from dataclasses import dataclass, field
 from typing import Dict
 
+
+@dataclass
 class Process:
     name: str
-    inputs: Dict[str, int]
-    outputs: Dict[str, int]
+    inputs: Dict[str, int] | None
+    outputs: Dict[str, int] | None
     delay: int
-    in_progress: bool
-
-    def __init__(self, name, inputs, outputs, delay):
-        self.name = name
-        self.inputs = inputs
-        self.outputs = outputs
-        self.delay = delay
-        self.in_progress = False
+    in_progress: bool = field(default=False)
 
     def __str__(self) -> str:
-        return f"Process(name={self.name}, inputs={self.inputs}, outputs={self.outputs}, delay={self.delay})"
+        return f"Process: name={self.name}, inputs={self.inputs}, outputs={self.outputs}, delay={self.delay}"

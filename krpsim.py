@@ -1,15 +1,14 @@
-import argparse
 import logging
 import logging.config
 import kr_config
 import traceback
 import sys
-import os
 
-from parsing.parser import parse
+from arg_parse.argparse_init import argparse_init
+from file_parsing.parser import parse
 
 
-def configure_logging(debug: bool):
+def logging_init(debug: bool):
     """Configures logger format and level."""
     level = logging.DEBUG if debug else logging.INFO
 
@@ -19,28 +18,19 @@ def configure_logging(debug: bool):
     )
 
 
-def existing_file(path: str) -> str:
-    """Helper function used to validate the file_input argument."""
-    if not os.path.isfile(path):
-        raise argparse.ArgumentTypeError(f"File '{path}' does not exist")
-    return path
-
-
 def main() -> int:
     # Parser's configuration initialization
-    parser = argparse.ArgumentParser(
-        description='Run krpsim program with an input file and a delay',
-        usage="python3.10 krpsim.py <input_file> <delay>"
-    )
-    parser.add_argument('input_file', type=existing_file, help='Path to the input file')
-    parser.add_argument('delay', type=int, help='Numeric delay to not exceed')
-    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
-
+    parser = argparse_init()
     args = parser.parse_args()
-    configure_logging(args.debug)
 
+    # Initializes the logger
+    logging_init(args.debug)
+
+    # Handle debug mode so that the whole program has access to it
     kr_config.DEBUG = args.debug
-    stock, processes, to_optimize = parse(args.input_file, args.delay)
+
+    delay = int(args.delay)
+    stock, processes, to_optimize = parse(args.input_file)
 
     return 0
 

@@ -14,22 +14,14 @@ PROCESS_PATTERN_EXPR = "^(\w+):(?:\((?:(\w+:\d+(?:;\w+:\d+)*))\))?:(?:\((?:(\w+:
 OPTIMIZE_PATTERN_EXPR = "^(optimize):\((?:(\w+\|time(?:;\w+\|time)*))\)$"
 
 
-def parse(input_file: str, delay: int) -> tuple[Stock, list[Process], list[str]]:
-    if not isinstance(input_file, str):
-        raise TypeError("input_file must be an integer.")
-    if not isinstance(delay, int):
-        raise TypeError("delay must be an integer.")
-
+def parse(input_file: str) -> tuple[Stock, list[Process], list[str]]:
     stock: Stock = Stock()
     processes: list[Process] = []
     to_optimize: list[str] = []
 
-    try:
-        with open(input_file, 'r') as file:
-            data = file.read()
-            file_lines = data.splitlines()
-    except FileNotFoundError as err:
-        raise err
+    with open(input_file, 'r') as file:
+        data = file.read()
+        file_lines = data.splitlines()
 
     # Collects all line from the file that are not empty and not comments
     file_lines = [line for line in file_lines if line.strip() and not line.strip().startswith('#')]
@@ -41,20 +33,20 @@ def parse(input_file: str, delay: int) -> tuple[Stock, list[Process], list[str]]
 
         # Stock line
         if stock_match:
-            if processes:
+            if len(processes) != 0:
                 raise FileFormatOrderError()
             name, quantity = parse_stock_line(stock_match)
             stock.add(name, quantity)
 
         # Process line
         elif process_match:
-            if not stock.inventory:
+            if len(stock.inventory) == 0:
                 raise FileFormatOrderError()
             processes.append(parse_process_line(process_match))
 
         # Optimize line
         elif optimize_match:
-            if to_optimize:
+            if len(to_optimize) != 0:
                 raise FileFormatError(line)
             if not stock.inventory or not processes:
                 raise FileFormatOrderError()
@@ -68,16 +60,16 @@ def parse(input_file: str, delay: int) -> tuple[Stock, list[Process], list[str]]
 
 
 def parse_stock_line(stock_match: re.Match[str]) -> tuple[str, int] | None:
-    resource = stock_match.group(1).strip()
-    quantity = int(stock_match.group(2).strip())
+    resource = stock_match.group(1)
+    quantity = int(stock_match.group(2))
     return resource, quantity
 
 
 def parse_process_line(stock_match: re.Match[str]) -> Process | None:
-    name = stock_match.group(1).strip()
-    inputs_str = stock_match.group(2).strip() if stock_match.group(2) is not None else None
-    outputs_str = stock_match.group(3).strip() if stock_match.group(3) is not None else None
-    delay = int(stock_match.group(4).strip())
+    name = stock_match.group(1)
+    inputs_str = stock_match.group(2) if stock_match.group(2) is not None else None
+    outputs_str = stock_match.group(3) if stock_match.group(3) is not None else None
+    delay = int(stock_match.group(4))
 
     inputs = parse_resource_quantity_list(inputs_str) if inputs_str else None
     outputs = parse_resource_quantity_list(outputs_str) if outputs_str else None
@@ -86,9 +78,8 @@ def parse_process_line(stock_match: re.Match[str]) -> Process | None:
 
 
 def parse_optimize_line(optimize_match: re.Match[str]) -> list[str] | None:
-    # Names of stocks to optimize are in the second group in <optimize:(stock1;stock2)>
-    names = optimize_match.group(2).split(';')
-    return names
+    # Names of stocks to optimize are in the second group in <optimize:(stock1|time;stock2|time;[...])>
+    return optimize_match.group(2).split(';')
 
 
 def parse_resource_quantity_list(rq_list_str: str) -> dict:
@@ -98,8 +89,8 @@ def parse_resource_quantity_list(rq_list_str: str) -> dict:
         for item in rq_items:
             if item:
                 resource, quantity_str = item.split(':')
-                resource = resource.strip()
-                quantity = int(quantity_str.strip())
+                resource = resource
+                quantity = int(quantity_str)
                 # If key already exists, add the values together
                 rq_dict[resource] = rq_dict.get(resource, 0) + quantity
     return rq_dict

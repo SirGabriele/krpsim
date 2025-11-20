@@ -18,14 +18,6 @@ dream_hour:(second:1;dream:2):(hour:1;dream:2):1
 dream_day:(second:1;dream:3):(day:1;dream:3):1
 end_dream:(dream:3):(clock:1):60
 
-toto:1 -> year:1 -> 1000
-
-tutu:1 -> tata:1 -> 1
-tata:1 -> tete:1 -> 1
-tete:1 -> year:1 -> 1
-
-toto 10 -> 1000 10 year
-tutu10 10 -> 3 10 year
 #
 # optimize:(stock1|time;stock2|time;[...])
 #

@@ -7,6 +7,7 @@ from typing import Optional
 from process import Process
 from stock import Stock
 
+transposition_table: dict[str, Stock] = {}
 
 class Manager:
     def __init__(self, stock: Stock,
@@ -14,7 +15,6 @@ class Manager:
                  delay_max: int,
                  mother: Manager = None,
                  father: Manager = None,
-
                  ):
         self.processes = processes
         self.weights: dict[str, float] = {}
@@ -24,25 +24,28 @@ class Manager:
                 self.weights[process.name] = random.random()
         else:
             self.reproduct(mother, father)
-            self.mutate()#apply mutation
-        #apply mutation
+            self.mutate()
 
-        self.stock = stock
+        self.stock = deepcopy(stock)
         self.delay_max = delay_max
         self.processes_in_progress: list[Process] = []
         self.score = 0
-        self.number_actions = 0
         self.actual_delay = 0
         self.processes_launched = {}
         self.processes_sorted = sorted(self.processes, key=lambda p: -self.weights.get(p.name, 0))
         self.deadlock = False
 
     def run(self):
-        for i in range(self.delay_max):
-            self.actual_delay += 1
-            self.run_processes()
-            if self.deadlock:
-                break
+        hash_weights = self.hash_weights()
+        if hash_weights in transposition_table:
+            self.stock = deepcopy(transposition_table[hash_weights])
+        else:
+            for i in range(self.delay_max):
+                self.actual_delay += 1
+                self.run_processes()
+                if self.deadlock:
+                    break
+        transposition_table[hash_weights] = deepcopy(self.stock)
         self.evaluate()
 
     def launch_process(self, process: Process):
@@ -72,14 +75,7 @@ class Manager:
         self.deadlock = lock
 
     def evaluate(self):
-        for number_process_launched in self.processes_launched.values():
-            self.score += number_process_launched * 0.5
-        self.score += len(self.processes_launched) * 10
-        self.score += self.stock.get_quantity('steak_cuit') * 100000000
-        # self.score += 1000000000 * self.stock.get_quantity('clock') if self.stock.get_quantity('clock') >= 1 else -100000000
-        self.score += self.stock.get_total_quantity() * 5
-        self.score += self.stock.get_num_resources() * 10
-        self.score += -1000 if self.deadlock else 0
+        self.score = 0
 
     def reproduct(self, mother: Manager, father: Manager):
         for process in self.processes:
@@ -92,9 +88,19 @@ class Manager:
 
     def mutate(self):
         for process in self.processes:
-            if random.uniform(0, 1) >= 0.85:
+            if random.uniform(0, 1) >= 0.25:
                 self.weights[process.name] += random.uniform(-0.2, 0.2)
-        if random.uniform(0, 1) >= 0.85:
+        if random.uniform(0, 1) >= 0.25:
             self.aggressiveness_weight += random.uniform(-0.2, 0.2)
 
 
+    def hash_weights(self) -> str:
+        hash = ""
+        aggressiveness_included = False
+        for process in self.processes_sorted:
+            process_weight = self.weights.get(process.name, 0)
+            if (not aggressiveness_included) and (process_weight < self.aggressiveness_weight):
+                hash += f"AGGRESSIVE|"
+                aggressiveness_included = True
+            hash += f"{process.name}|"
+        return hash

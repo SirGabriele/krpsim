@@ -12,7 +12,6 @@ jouer_a_la_marelle:(bonbon:5;moi:1):(moi:1;marelle:1):20
 parier_avec_un_copain:(bonbon:2;moi:1):(moi:1;bonbon:3):10
 parier_avec_un_autre_copain:(moi:1;bonbon:2):(moi:1;bonbon:1):10
 se_battre_dans_la_cours:(moi:1):(moi:1;bonbon:1):50
-suicide:(moi:1)::50
 #
 # optimize:(stock1|time;stock2|time;[...])
 #

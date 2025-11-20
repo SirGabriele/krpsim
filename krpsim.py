@@ -1,7 +1,6 @@
 import sys
 
 from ManagerController import ManagerController
-from genetic_algo import genetic
 from parser import Parser
 
 def main() -> int:

@@ -93,8 +93,8 @@ class Manager:
     def mutate(self):
         for process in self.processes:
             if random.uniform(0, 1) >= 0.85:
-                self.weights[process.name] += random.uniform(-0.1, 0.1)
+                self.weights[process.name] += random.uniform(-0.2, 0.2)
         if random.uniform(0, 1) >= 0.85:
-            self.aggressiveness_weight += random.uniform(-0.1, 0.1)
+            self.aggressiveness_weight += random.uniform(-0.2, 0.2)
 
 

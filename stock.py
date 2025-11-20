@@ -1,25 +1,22 @@
+from dataclasses import dataclass, field
 from typing import Dict
 
+
+@dataclass
 class Stock:
-    stock: Dict[str, int]
+    inventory: Dict[str, int] = field(default_factory=dict)
 
-    def __init__(self):
-        self.stock = {}
-
-    def add(self, resource: str, quantity: int):
-        if resource in self.stock:
-            self.stock[resource] += quantity
-        else:
-            self.stock[resource] = quantity
+    def add(self, resource: str, quantity: int) -> None:
+        self.inventory[resource] = self.inventory.get(resource, 0) + quantity
 
     def consume(self, resource: str, quantity: int) -> bool:
-        if resource in self.stock and self.stock[resource] >= quantity:
-            self.stock[resource] -= quantity
+        if resource in self.inventory and self.inventory[resource] >= quantity:
+            self.inventory[resource] -= quantity
             return True
         return False
 
     def get_quantity(self, resource: str) -> int:
-        return self.stock.get(resource, 0)
+        return self.inventory.get(resource, 0)
 
     def __str__(self) -> str:
-        return str(self.stock)
+        return f"Stock: stock={self.inventory}"

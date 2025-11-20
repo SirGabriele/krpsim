@@ -18,9 +18,7 @@ dream_hour:(second:1;dream:2):(hour:1;dream:2):1
 dream_day:(second:1;dream:3):(day:1;dream:3):1
 end_dream:(dream:3):(clock:1):60
 #
-# optimize time for no process possible (eating stock, produce all possible),
-# or maximize some products over a long delay
-# optimize:(time|stock1;time|stock2;...)
+# optimize:(stock1|time;stock2|time;[...])
 #
-optimize:(year)
+optimize:(year|time)
 #

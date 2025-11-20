@@ -76,6 +76,8 @@ class Manager:
 
     def evaluate(self):
         self.score = 0
+        self.score += self.stock.get_total_quantity()
+        self.score += self.stock.get_num_resources() * 5000
 
     def reproduct(self, mother: Manager, father: Manager):
         for process in self.processes:

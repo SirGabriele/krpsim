@@ -5,7 +5,7 @@ from process import Process
 from stock import Stock
 from Manager import Manager
 
-NUMBER_OF_MANAGERS_PER_GENERATION = 1000
+NUMBER_OF_MANAGERS_PER_GENERATION = 100
 NUMBER_OF_GENERATIONS = 10
 
 class ManagerController:

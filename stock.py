@@ -19,10 +19,10 @@ class Stock:
         return self.inventory.get(resource, 0)
 
     def get_total_quantity(self) -> int:
-        return sum(self.stock.values())
+        return sum(self.inventory.values())
 
     def get_num_resources(self) -> int:
-        return len(self.stock)
+        return len(self.inventory)
 
     def __str__(self) -> str:
         return f"Stock: stock={self.inventory}"

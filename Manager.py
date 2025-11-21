@@ -32,7 +32,7 @@ class Manager:
         self.score = 0
         self.actual_delay = 0
         self.processes_launched = {}
-        self.processes_sorted = sorted(self.processes, key=lambda p: -self.weights.get(p.name, 0))
+        self.processes_sorted = sorted(self.processes, key=lambda p: (-self.weights[p.name], p.name))
         self.deadlock = False
 
     def run(self):
@@ -61,13 +61,16 @@ class Manager:
 
     def run_processes(self):
         lock = True
+        processes_finished = []
         for running_process in self.processes_in_progress:
             lock = False
             running_process.delay -= 1
             if running_process.delay <= 0:
-                self.processes_in_progress.remove(running_process)
+                processes_finished.append(running_process)
                 for output, quantity in running_process.outputs.items():
                     self.stock.add(output, quantity)
+        for process in processes_finished:
+            self.processes_in_progress.remove(process)
         for process in self.processes_sorted:
             if self.weights.get(process.name, 0) > self.aggressiveness_weight:
                 self.launch_process(process)
@@ -76,8 +79,14 @@ class Manager:
 
     def evaluate(self):
         self.score = 0
-        self.score += self.stock.get_total_quantity()
-        self.score += self.stock.get_num_resources() * 5000
+        #self.score += self.stock.get_total_quantity()
+        self.score += self.stock.get_num_resources() * 20
+        #self.score += self.stock.get_quantity('dream') * 10
+        self.score += self.stock.get_quantity('year') * 10
+        self.score += self.stock.get_quantity('dream') * 5
+        #self.score += self.stock.get_quantity('day') * 1000
+        #self.score += self.stock.get_quantity('hour') * 500
+        #self.score += self.stock.get_quantity('second') * 100
 
     def reproduct(self, mother: Manager, father: Manager):
         for process in self.processes:

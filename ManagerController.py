@@ -6,7 +6,7 @@ from stock import Stock
 from Manager import Manager
 
 NUMBER_OF_MANAGERS_PER_GENERATION = 100
-NUMBER_OF_GENERATIONS = 10
+NUMBER_OF_GENERATIONS = 20
 
 class ManagerController:
     stock: Stock
@@ -24,7 +24,8 @@ class ManagerController:
             for manager in self.managers:
                 manager.run()
             self.managers = sorted(self.managers, key=lambda m: m.score, reverse=True)
-            print(f"GEN {i:2.0f} - BEST SCORE: {self.managers[0].score} | STOCK: {self.managers[0].stock}")
+            #print(f"GEN {i:2.0f} - BEST SCORE: {self.managers[0].score} | STOCK: {self.managers[0].stock}")
+            print([manager.score for manager in self.managers])
             if i != NUMBER_OF_GENERATIONS - 1:
                 self.managers = self.next_generation()
         print(self.managers[0].stock)
@@ -36,15 +37,16 @@ class ManagerController:
         modify_managers = self.managers[:index_modify_manager]
 
         for i in range(NUMBER_OF_MANAGERS_PER_GENERATION):
-            if (i <= index_best_manager):
+            if i <= index_best_manager:
                 new_manager = Manager(self.stock, self.processes, self.delay_max)
                 new_manager.weights = self.managers[i].weights.copy()
                 new_manager.aggressiveness_weight = self.managers[i].aggressiveness_weight
+                new_manager.processes_sorted = sorted(self.processes, key=lambda p: (-self.managers[i].weights[p.name], p.name))
                 new_managers.append(new_manager)
                 continue
             random_parent1 = random.choice(modify_managers)
             random_parent2 = random.choice(modify_managers)
             new_managers.append(Manager(
-                self.stock, self.processes, self.delay_max, random_parent1, random_parent2))
+               self.stock, self.processes, self.delay_max, random_parent1, random_parent2))
 
         return new_managers

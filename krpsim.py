@@ -7,6 +7,7 @@ import sys
 from ManagerController import ManagerController
 from arg_parse.argparse_init import argparse_init
 from file_parsing.parser import parse
+from test import run_simulation
 
 
 def logging_init(debug: bool):
@@ -33,8 +34,9 @@ def main() -> int:
     delay = int(args.delay)
     stock, processes = parse(args.input_file)
 
-    manager_controller = ManagerController(stock, processes, delay)
-    manager_controller.start()
+    # manager_controller = ManagerController(stock, processes, delay)
+    # manager_controller.start()
+    run_simulation(stock, processes, delay)
     return 0
 
 if __name__ == '__main__':

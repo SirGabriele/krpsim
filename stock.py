@@ -4,6 +4,7 @@ from typing import Dict
 
 @dataclass
 class Stock:
+    resources_to_optimize: list[str] = field(default_factory=list)
     inventory: Dict[str, int] = field(default_factory=dict)
 
     def add(self, resource: str, quantity: int) -> None:

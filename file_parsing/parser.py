@@ -1,5 +1,7 @@
 import re
 
+from mercurial.pathutil import join
+
 from custom_exceptions.FileFormatError import FileFormatError
 from custom_exceptions.FileFormatOrderError import FileFormatOrderError
 from process import Process
@@ -14,7 +16,7 @@ PROCESS_PATTERN_EXPR = "^(\w+):(?:\((?:(\w+:\d+(?:;\w+:\d+)*))\))?:(?:\((?:(\w+:
 OPTIMIZE_PATTERN_EXPR = "^(optimize):\((?:(\w+\|time(?:;\w+\|time)*))\)$"
 
 
-def parse(input_file: str) -> tuple[Stock, list[Process], list[str]]:
+def parse(input_file: str) -> tuple[Stock, list[Process]]:
     stock: Stock = Stock()
     processes: list[Process] = []
     to_optimize: list[str] = []
@@ -51,12 +53,13 @@ def parse(input_file: str) -> tuple[Stock, list[Process], list[str]]:
             if not stock.inventory or not processes:
                 raise FileFormatOrderError()
             to_optimize = parse_optimize_line(optimize_match)
+            stock.resources_to_optimize = to_optimize
 
         # Unknown line
         else:
             raise FileFormatError(line)
 
-    return stock, processes, to_optimize
+    return stock, processes
 
 
 def parse_stock_line(stock_match: re.Match[str]) -> tuple[str, int] | None:
@@ -79,7 +82,11 @@ def parse_process_line(stock_match: re.Match[str]) -> Process | None:
 
 def parse_optimize_line(optimize_match: re.Match[str]) -> list[str] | None:
     # Names of stocks to optimize are in the second group in <optimize:(stock1|time;stock2|time;[...])>
-    return optimize_match.group(2).split(';')
+    groups = optimize_match.group(2).split(';')
+    resources_to_optimize = []
+    for group in groups:
+        resources_to_optimize.append(group.split('|')[0])
+    return resources_to_optimize
 
 
 def parse_resource_quantity_list(rq_list_str: str) -> dict:

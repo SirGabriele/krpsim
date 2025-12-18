@@ -28,7 +28,7 @@ def main() -> int:
     kr_config.DEBUG = args.debug
 
     delay = int(args.delay)
-    stock, processes, to_optimize = parse(args.input_file)
+    stock, processes = parse(args.input_file)
 
     return 0
 

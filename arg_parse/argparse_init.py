@@ -19,3 +19,12 @@ def argparse_init():
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
 
     return parser
+
+def argparse_verif_init():
+    parser = argparse.ArgumentParser(
+        description='Run krpsim_verif program with an input file and a trace file',
+        usage="python3.10 krpsim_verif.py <input_file> <trace_file>"
+    )
+    parser.add_argument('input_file', type=existing_file, help='path to the input file')
+    parser.add_argument('trace_file', type=int, help='path to the trace file')
+    return parser

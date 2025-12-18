@@ -41,4 +41,7 @@ class Stock:
         return True
 
     def __str__(self) -> str:
-        return f"Stock: stock={self.inventory}"
+        return (
+            f"Stock: stock={self.inventory}\n"
+            f"\tresources_to_optimize={self.resources_to_optimize}"
+        )

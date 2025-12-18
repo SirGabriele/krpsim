@@ -15,7 +15,7 @@ def logging_init(debug: bool):
 
     logging.basicConfig(
         level=level,
-        format="%(asctime)s [%(levelname)s] %(name)s %(message)s"
+        format="%(asctime)s [%(levelname)s] %(name)s.py | %(message)s"
     )
 
 
@@ -31,7 +31,7 @@ def main() -> int:
     kr_config.DEBUG = args.debug
 
     delay = int(args.delay)
-    stock, processes, to_optimize = parse(args.input_file)
+    stock, processes = parse(args.input_file)
 
     manager_controller = ManagerController(stock, processes, delay)
     manager_controller.start()

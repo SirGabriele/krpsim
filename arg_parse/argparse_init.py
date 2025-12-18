@@ -14,8 +14,8 @@ def argparse_init():
         description='Run krpsim program with an input file and a delay',
         usage="python3.10 krpsim.py <input_file> <delay>"
     )
-    parser.add_argument('input_file', type=existing_file, help='Path to the input file')
-    parser.add_argument('delay', type=int, help='Numeric delay to not exceed')
-    parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument('input_file', type=existing_file, help='path to the input file')
+    parser.add_argument('delay', type=int, help='numeric delay to not exceed')
+    parser.add_argument("-d", "--debug", action="store_true", help="enable debug mode")
 
     return parser

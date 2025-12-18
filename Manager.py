@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import random
 from copy import deepcopy
-from typing import Optional
 
 from process import Process
 from stock import Stock
@@ -64,8 +63,8 @@ class Manager:
         processes_finished = []
         for running_process in self.processes_in_progress:
             lock = False
-            running_process.delay -= 1
-            if running_process.delay <= 0:
+            running_process.cycle_amount -= 1
+            if running_process.cycle_amount <= 0:
                 processes_finished.append(running_process)
                 for output, quantity in running_process.outputs.items():
                     self.stock.add(output, quantity)

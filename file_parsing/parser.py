@@ -4,6 +4,7 @@ from custom_exceptions.FileFormatError import FileFormatError
 from custom_exceptions.FileFormatOrderError import FileFormatOrderError
 from process import Process
 from stock import Stock
+from utils.display_config_file_data import display_config_file_data
 
 
 ALLOWED_CHAR_EXPR = "\w+"
@@ -14,7 +15,7 @@ PROCESS_PATTERN_EXPR = "^(\w+):(?:\((?:(\w+:\d+(?:;\w+:\d+)*))\))?:(?:\((?:(\w+:
 OPTIMIZE_PATTERN_EXPR = "^(optimize):\((?:(\w+\|time(?:;\w+\|time)*))\)$"
 
 
-def parse(input_file: str) -> tuple[Stock, list[Process], list[str]]:
+def parse(input_file: str) -> tuple[Stock, dict[str, Process]]:
     stock: Stock = Stock()
     processes: list[Process] = []
     to_optimize: list[str] = []
@@ -50,13 +51,16 @@ def parse(input_file: str) -> tuple[Stock, list[Process], list[str]]:
                 raise FileFormatError(line)
             if not stock.inventory or not processes:
                 raise FileFormatOrderError()
-            to_optimize = parse_optimize_line(optimize_match)
+            stock.resources_to_optimize = parse_optimize_line(optimize_match)
 
         # Unknown line
         else:
             raise FileFormatError(line)
 
-    return stock, processes, to_optimize
+    display_config_file_data(len(processes), len(stock.inventory), len(stock.resources_to_optimize))
+
+    processes_dict: dict[str, Process] = {p.name: p for p in processes}
+    return stock, processes_dict
 
 
 def parse_stock_line(stock_match: re.Match[str]) -> tuple[str, int] | None:
@@ -65,7 +69,7 @@ def parse_stock_line(stock_match: re.Match[str]) -> tuple[str, int] | None:
     return resource, quantity
 
 
-def parse_process_line(stock_match: re.Match[str]) -> Process | None:
+def parse_process_line(stock_match: re.Match[str]) -> Process:
     name = stock_match.group(1)
     inputs_str = stock_match.group(2) if stock_match.group(2) is not None else None
     outputs_str = stock_match.group(3) if stock_match.group(3) is not None else None
@@ -78,8 +82,9 @@ def parse_process_line(stock_match: re.Match[str]) -> Process | None:
 
 
 def parse_optimize_line(optimize_match: re.Match[str]) -> list[str] | None:
-    # Names of stocks to optimize are in the second group in <optimize:(stock1|time;stock2|time;[...])>
-    return optimize_match.group(2).split(';')
+    # Names of stocks to optimize are in the second group in <(optimize):(stock1|time;stock2|time;[...])>
+    groups = optimize_match.group(2).split(';')
+    return list({group.split('|')[0] for group in groups})
 
 
 def parse_resource_quantity_list(rq_list_str: str) -> dict:

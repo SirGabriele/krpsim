@@ -15,6 +15,9 @@ class Stock:
     def consume(self, resource: str, quantity: int) -> bool:
         if resource in self.inventory and self.inventory[resource] >= quantity:
             self.inventory[resource] -= quantity
+            # Deletes the entry if quantity falls down to 0
+            if self.inventory[resource] == 0:
+                del self.inventory[resource]
             return True
         return False
 
@@ -41,7 +44,4 @@ class Stock:
         return True
 
     def __str__(self) -> str:
-        return (
-            f"Stock: stock={self.inventory}\n"
-            f"\tresources_to_optimize={self.resources_to_optimize}"
-        )
+        return f"Stock: stock={self.inventory}, resources_to_optimize={self.resources_to_optimize}"

@@ -26,5 +26,5 @@ def argparse_verif_init():
         usage="python3.10 krpsim_verif.py <input_file> <trace_file>"
     )
     parser.add_argument('input_file', type=existing_file, help='path to the input file')
-    parser.add_argument('trace_file', type=int, help='path to the trace file')
+    parser.add_argument('trace_file', type=existing_file, help='path to the trace file')
     return parser

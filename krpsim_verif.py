@@ -30,26 +30,6 @@ def dose_stock_have_inputs(stock: Stock, inputs: dict[str, int]) -> bool:
             return False
     return True
 
-def print_os_error_message(error: OSError):
-    if isinstance(error, FileNotFoundError):
-        print(f"File not found: {error.filename}")
-    elif isinstance(error, PermissionError):
-        print(f"Permission denied: {error.filename}")
-    else:
-        print(f"OS error ({error.errno}): {error.strerror} - {error.filename}")
-
-def print_error_message(error: BaseException):
-    print(error)
-    return
-    if isinstance(error, OSError):
-        print_os_error_message(error)
-    elif (isinstance(error, InvalidTraceLineError) or
-          isinstance(error, ProcessNameNotFoundError) or
-          isinstance(error, ImpossibleCycleOrderError)):
-        print(error)
-    else:
-        print(f"Error: {error}")
-
 def parse_trace_line(trace_line: str, processes: list[Process]) -> tuple[int, str]:
     """
     Parse a single line of the trace file.
@@ -88,7 +68,7 @@ def parse_trace(trace_file: str,processes: list[Process]) -> list[tuple[int, str
                 last_cycle = cycle
         return parsed_lines
     except Exception as e:
-        print_error_message(e)
+        print(e)
         return None
 
 def simulate_trace(parsed_lines: list[tuple[int, str]], processes: list[Process], stock: Stock) -> bool:
@@ -116,7 +96,7 @@ def simulate_trace(parsed_lines: list[tuple[int, str]], processes: list[Process]
             add_to_stock(stock, proc.outputs)
         return True
     except Exception as e:
-        print_error_message(e)
+        print(e)
         return False
 
 def print_final_info(stock :Stock):

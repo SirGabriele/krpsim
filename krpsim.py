@@ -2,9 +2,9 @@ import logging
 import logging.config
 import kr_config
 import traceback
+import simulation
 import sys
 
-from ManagerController import ManagerController
 from arg_parse.argparse_init import argparse_init
 from file_parsing.parser import parse
 
@@ -15,7 +15,7 @@ def logging_init(debug: bool):
 
     logging.basicConfig(
         level=level,
-        format="%(asctime)s [%(levelname)s] %(name)s %(message)s"
+        format="%(asctime)s [%(levelname)s] | %(message)s"
     )
 
 
@@ -33,8 +33,8 @@ def main() -> int:
     delay = int(args.delay)
     stock, processes = parse(args.input_file)
 
-    manager_controller = ManagerController(stock, processes, delay)
-    manager_controller.start()
+    simulation.start(stock, processes, delay)
+
     return 0
 
 if __name__ == '__main__':

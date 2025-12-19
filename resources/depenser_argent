@@ -1,0 +1,12 @@
+#
+# stock      name:quantity
+euro:10000
+#
+# process   name:(need1:qty1;need2:qty2;[...]):(result1:qty1;result2:qty2;[...]):delay
+#
+depenser_argent:(euro:1)::10
+#
+# optimize:(stock1|time;stock2|time;[...])
+#
+optimize:(euro|time)
+#

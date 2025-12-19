@@ -1,11 +1,10 @@
 import re
 
-from mercurial.pathutil import join
-
 from custom_exceptions.FileFormatError import FileFormatError
 from custom_exceptions.FileFormatOrderError import FileFormatOrderError
 from process import Process
 from stock import Stock
+from utils.display_config_file_data import display_config_file_data
 
 
 ALLOWED_CHAR_EXPR = "\w+"
@@ -52,12 +51,21 @@ def parse(input_file: str) -> tuple[Stock, list[Process]]:
                 raise FileFormatError(line)
             if not stock.inventory or not processes:
                 raise FileFormatOrderError()
-            to_optimize = parse_optimize_line(optimize_match)
+            to_optimize = parse_optimize_line(
+                optimize_match,
+                [key for process in processes for key in process.inputs or {}],
+                [key for process in processes for key in process.outputs or {}]
+            )
             stock.resources_to_optimize = to_optimize
 
         # Unknown line
         else:
             raise FileFormatError(line)
+
+    if not to_optimize:
+        raise FileFormatOrderError()
+
+    display_config_file_data(len(processes), len(stock.inventory), len(stock.resources_to_optimize))
 
     return stock, processes
 
@@ -80,12 +88,17 @@ def parse_process_line(stock_match: re.Match[str]) -> Process | None:
     return Process(name, inputs, outputs, delay)
 
 
-def parse_optimize_line(optimize_match: re.Match[str]) -> list[str] | None:
+def parse_optimize_line(optimize_match: re.Match[str], inputs: list[str], outputs: list[str]) -> list[
+                                                                                                     str] | None:
     # Names of stocks to optimize are in the second group in <optimize:(stock1|time;stock2|time;[...])>
     groups = optimize_match.group(2).split(';')
     resources_to_optimize = []
     for group in groups:
-        resources_to_optimize.append(group.split('|')[0])
+        resource_to_optimize = group.split('|')[0]
+        if resource_to_optimize in inputs or resource_to_optimize in outputs:
+            resources_to_optimize.append(resource_to_optimize)
+        else:
+            return []
     return resources_to_optimize
 
 

@@ -2,6 +2,7 @@ import logging
 import logging.config
 import kr_config
 import traceback
+import simulation
 import sys
 
 from arg_parse.argparse_init import argparse_init
@@ -13,7 +14,7 @@ def logging_init(debug: bool):
 
     logging.basicConfig(
         level=level,
-        format="%(asctime)s [%(levelname)s] %(name)s %(message)s"
+        format="%(asctime)s [%(levelname)s] | %(message)s"
     )
 
 def main() -> int:
@@ -29,6 +30,8 @@ def main() -> int:
 
     delay = int(args.delay)
     stock, processes = parse(args.input_file)
+
+    simulation.start(stock, processes, delay)
 
     return 0
 

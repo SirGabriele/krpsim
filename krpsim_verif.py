@@ -77,6 +77,9 @@ class KrpSimVerifier:
         :param items: Items to remove with their quantities.
         :return: None
         """
+        if items is None:
+            return
+
         for item, qty in items.items():
             self.stock.consume(item, qty)
 
@@ -86,6 +89,9 @@ class KrpSimVerifier:
         :param items: Items to add with their quantities.
         :return: None
         """
+        if items is None:
+            return
+
         for item, qty in items.items():
             self.stock.add(item, qty)
 
@@ -95,6 +101,9 @@ class KrpSimVerifier:
         :param inputs: Input items with their required quantities.
         :return: True if stock has enough quantity for all items, False otherwise.
         """
+        if inputs is None:
+            return True
+
         for item, qty in inputs.items():
             if self.stock.get_quantity(item) < qty:
                 return False

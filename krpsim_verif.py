@@ -14,7 +14,6 @@ from process import Process
 from stock import Stock
 
 TRACE_LINE_FORMAT = f"^({NUMERIC_EXPR}):({ALLOWED_CHAR_EXPR})$"
-last_checked_cycle = 0
 
 def remove_from_stock(stock: Stock, items: dict[str, int]):
     for item, qty in items.items():
@@ -71,10 +70,10 @@ def parse_trace(trace_file: str,processes: list[Process]) -> list[tuple[int, str
         print(e)
         return None
 
-def simulate_trace(parsed_lines: list[tuple[int, str]], processes: list[Process], stock: Stock) -> bool:
+def simulate_trace(parsed_lines: list[tuple[int, str]], processes: list[Process], stock: Stock) -> tuple[bool, int]:
+    last_checked_cycle = 0
     try:
         processes_running: list[tuple[int, Process]]= []  # List of (end_cycle, Process)
-        global last_checked_cycle
         for cycle, process_name in parsed_lines:
             last_checked_cycle = cycle
             # First, check if any process has finished by this cycle
@@ -94,12 +93,12 @@ def simulate_trace(parsed_lines: list[tuple[int, str]], processes: list[Process]
             if end_cycle > last_checked_cycle:
                 last_checked_cycle = end_cycle
             add_to_stock(stock, proc.outputs)
-        return True
+        return True, last_checked_cycle
     except Exception as e:
         print(e)
-        return False
+        return False, last_checked_cycle
 
-def print_final_info(stock :Stock):
+def print_final_info(stock: Stock, last_checked_cycle: int):
     print(f"Simulation ended at cycle {last_checked_cycle}.")
     print("Final stock :")
     for resource, quantity in stock.inventory.items():
@@ -113,14 +112,16 @@ def main() -> int:
     stock, processes, _ = parse(args.input_file)
     parsed_lines = parse_trace(args.trace_file, processes)
     exit_code = 0
+    last_checked_cycle = 0
     if not parsed_lines:
         exit_code = 1
     else:
-        if not simulate_trace(parsed_lines, processes, stock):
+        success, last_checked_cycle = simulate_trace(parsed_lines, processes, stock)
+        if not success:
             exit_code = 1
     if exit_code == 0:
         print("Simulation completed successfully.")
-    print_final_info(stock)
+    print_final_info(stock, last_checked_cycle)
     return exit_code
 
 

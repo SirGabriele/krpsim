@@ -3,42 +3,26 @@ import traceback
 import sys
 import re
 
-from arg_parse.argparse_init import  argparse_verif_init
+from arg_parse.argparse_init import argparse_verif_init
 from custom_exceptions.NotEnoughResourcesError import NotEnoughResourcesError
 from custom_exceptions.ProcessNameNotFoundError import ProcessNameNotFoundError
 from custom_exceptions.ImpossibleCycleOrderError import ImpossibleCycleOrderError
 from custom_exceptions.InvalidTraceLineError import InvalidTraceLineError
-from custom_exceptions.ProcessNameNotFoundError import ProcessNameNotFoundError
 from file_parsing.parser import parse, NUMERIC_EXPR, ALLOWED_CHAR_EXPR
 from process import Process
 from stock import Stock
 
 TRACE_LINE_FORMAT = f"^({NUMERIC_EXPR}):({ALLOWED_CHAR_EXPR})$"
 
-def remove_from_stock(stock: Stock, items: dict[str, int]):
-    for item, qty in items.items():
-        stock.consume(item, qty)
-
-def add_to_stock(stock: Stock, items: dict[str, int]):
-    for item, qty in items.items():
-        stock.add(item, qty)
-
-def dose_stock_have_inputs(stock: Stock, inputs: dict[str, int]) -> bool:
-    for item, qty in inputs.items():
-        if stock.get_quantity(item) < qty:
-            return False
-    return True
-
 def parse_trace_line(trace_line: str, processes: list[Process]) -> tuple[int, str]:
     """
-    Parse a single line of the trace file.
-
-    Throws InvalidTraceLineError if the line is not valid.
-    Throws ValueError if the cycle is not an integer.
-    Throws ProcessNotFoundError if the process name is not recognized.
-    :param processes:  List of valid processes.
-    :param trace_line: The line from the trace file.
-    :return: A tuple containing the cycle and the process name
+    Parse a single line from the trace file.
+    :param trace_line: Line to parse.
+    :param processes: List of available processes.
+    :return: Tuple of (cycle, process_name).
+    :raises InvalidTraceLineError: If the line format is invalid.
+    :raises ValueError: If the cycle is not a valid integer.
+    :raises ProcessNameNotFoundError: If the process name is not found in the list
     """
     match = re.search(TRACE_LINE_FORMAT, trace_line)
     if not match:
@@ -53,8 +37,13 @@ def parse_trace_line(trace_line: str, processes: list[Process]) -> tuple[int, st
     return int(cycle), process_name
 
 
-
-def parse_trace(trace_file: str,processes: list[Process]) -> list[tuple[int, str]] | None:
+def parse_trace(trace_file: str, processes: list[Process]) -> list[tuple[int, str]] | None:
+    """
+    Parse the entire trace file.
+    :param trace_file: Path to the trace file.
+    :param processes: List of available processes.
+    :return: List of tuples containing (cycle, process_name) or None if an error occurs.
+    """
     try:
         parsed_lines: list[tuple[int, str]] = []
         with open(trace_file) as trace:
@@ -70,40 +59,99 @@ def parse_trace(trace_file: str,processes: list[Process]) -> list[tuple[int, str
         print(e)
         return None
 
-def simulate_trace(parsed_lines: list[tuple[int, str]], processes: list[Process], stock: Stock) -> tuple[bool, int]:
-    last_checked_cycle = 0
-    try:
-        processes_running: list[tuple[int, Process]]= []  # List of (end_cycle, Process)
-        for cycle, process_name in parsed_lines:
-            last_checked_cycle = cycle
-            # First, check if any process has finished by this cycle
-            processes_to_complete = [pr for pr in processes_running if pr[0] <= cycle]
-            for end_cycle, proc in processes_to_complete:
-                add_to_stock(stock, proc.outputs)
-                processes_running.remove((end_cycle, proc))
+class KrpSimVerifier:
+    """
+    Class to verify the simulation based on the provided stock and processes.
+    :param stock: Initial stock of resources.
+    :param processes: List of available processes.
+    """
+    def __init__(self, stock: Stock, processes: list[Process]):
+        self.stock = stock
+        self.processes = processes
+        self.current_cycle = 0
+        self.running_processes: list[tuple[int, Process]] = []  # (end_cycle, Process)
 
-            # Now, try to start the new process
-            process = next(p for p in processes if p.name == process_name)
-            if not dose_stock_have_inputs(stock, process.inputs):
-                raise NotEnoughResourcesError(process_name, stock.inventory, process.inputs)
-            remove_from_stock(stock, process.inputs)
-            end_cycle = cycle + process.delay
-            processes_running.append((end_cycle, process))
-        for end_cycle, proc in processes_running:
-            if end_cycle > last_checked_cycle:
-                last_checked_cycle = end_cycle
-            add_to_stock(stock, proc.outputs)
-        return True, last_checked_cycle
-    except Exception as e:
-        print(e)
-        return False, last_checked_cycle
+    def _remove_from_stock(self, items: dict[str, int]):
+        """
+        Remove items from stock.
+        :param items: Items to remove with their quantities.
+        :return: None
+        """
+        for item, qty in items.items():
+            self.stock.consume(item, qty)
 
-def print_final_info(stock: Stock, last_checked_cycle: int):
-    print(f"Simulation ended at cycle {last_checked_cycle}.")
+    def _add_to_stock(self, items: dict[str, int]):
+        """
+        Add items to stock.
+        :param items: Items to add with their quantities.
+        :return: None
+        """
+        for item, qty in items.items():
+            self.stock.add(item, qty)
+
+    def _does_stock_have_inputs(self, inputs: dict[str, int]) -> bool:
+        """
+        Check if stock has enough quantity for all input items.
+        :param inputs: Input items with their required quantities.
+        :return: True if stock has enough quantity for all items, False otherwise.
+        """
+        for item, qty in inputs.items():
+            if self.stock.get_quantity(item) < qty:
+                return False
+        return True
+
+    def _complete_processes(self, cycle_limit: int):
+        """
+        Complete processes that finish at or before cycle_limit.
+        :param cycle_limit: The cycle limit up to which processes should be completed.
+        :return: None
+        """
+        finished = [pr for pr in self.running_processes if pr[0] <= cycle_limit]
+
+        for end_cycle, proc in finished:
+            self._add_to_stock(proc.outputs)
+            self.running_processes.remove((end_cycle, proc))
+
+    def run(self, parsed_lines: list[tuple[int, str]]) -> bool:
+        """
+        Run the simulation verifier with the parsed trace lines.
+        :param parsed_lines: List of tuples containing (cycle, process_name).
+        :return: True if simulation completes successfully, False otherwise.
+        """
+        try:
+            for cycle, process_name in parsed_lines:
+                self.current_cycle = cycle
+                self._complete_processes(self.current_cycle)
+                process = next(p for p in self.processes if p.name == process_name)
+                if not self._does_stock_have_inputs(process.inputs):
+                    raise NotEnoughResourcesError(process_name, self.stock.inventory, process.inputs)
+                self._remove_from_stock(process.inputs)
+                end_cycle = self.current_cycle + process.delay
+                self.running_processes.append((end_cycle, process))
+            if self.running_processes:
+                last_end_cycle = max(end for end, _ in self.running_processes)
+                if last_end_cycle > self.current_cycle:
+                    self.current_cycle = last_end_cycle
+                for _, proc in self.running_processes:
+                    self._add_to_stock(proc.outputs)
+                self.running_processes.clear()
+            return True
+        except Exception as e:
+            print(e)
+            return False
+
+
+def print_final_info(end_cycle: int, stock_inventory: dict[str, int]) -> None:
+    """
+    Print the final information of the simulation.
+    :param end_cycle: Current cycle of the simulation.
+    :param stock_inventory: Final stock inventory.
+    :return: None
+    """
+    print(f"Simulation ended at cycle {end_cycle}.")
     print("Final stock :")
-    for resource, quantity in stock.inventory.items():
+    for resource, quantity in stock_inventory.items():
         print(f"- {resource}: {quantity}")
-
 
 def main() -> int:
     parser = argparse_verif_init()
@@ -111,17 +159,20 @@ def main() -> int:
 
     stock, processes, _ = parse(args.input_file)
     parsed_lines = parse_trace(args.trace_file, processes)
+
     exit_code = 0
-    last_checked_cycle = 0
     if not parsed_lines:
+        print_final_info(0, stock.inventory)
+        return 1
+
+    verifier = KrpSimVerifier(stock, processes)
+    if not verifier.run(parsed_lines):
         exit_code = 1
-    else:
-        success, last_checked_cycle = simulate_trace(parsed_lines, processes, stock)
-        if not success:
-            exit_code = 1
+
     if exit_code == 0:
         print("Simulation completed successfully.")
-    print_final_info(stock, last_checked_cycle)
+
+    print_final_info(verifier.current_cycle, verifier.stock.inventory)
     return exit_code
 
 

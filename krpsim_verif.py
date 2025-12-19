@@ -39,6 +39,8 @@ def print_os_error_message(error: OSError):
         print(f"OS error ({error.errno}): {error.strerror} - {error.filename}")
 
 def print_error_message(error: BaseException):
+    print(error)
+    return
     if isinstance(error, OSError):
         print_os_error_message(error)
     elif (isinstance(error, InvalidTraceLineError) or
@@ -89,32 +91,37 @@ def parse_trace(trace_file: str,processes: list[Process]) -> list[tuple[int, str
         print_error_message(e)
         return None
 
-def simulate_trace(parsed_lines: list[tuple[int, str]], processes: list[Process], stock: Stock):
-    processes_running: list[tuple[int, Process]]= []  # List of (end_cycle, Process)
-    global last_checked_cycle
-    for cycle, process_name in parsed_lines:
-        last_checked_cycle = cycle
-        # First, check if any process has finished by this cycle
-        processes_to_complete = [pr for pr in processes_running if pr[0] <= cycle]
-        for end_cycle, proc in processes_to_complete:
-            add_to_stock(stock, proc.outputs)
-            processes_running.remove((end_cycle, proc))
+def simulate_trace(parsed_lines: list[tuple[int, str]], processes: list[Process], stock: Stock) -> bool:
+    try:
+        processes_running: list[tuple[int, Process]]= []  # List of (end_cycle, Process)
+        global last_checked_cycle
+        for cycle, process_name in parsed_lines:
+            last_checked_cycle = cycle
+            # First, check if any process has finished by this cycle
+            processes_to_complete = [pr for pr in processes_running if pr[0] <= cycle]
+            for end_cycle, proc in processes_to_complete:
+                add_to_stock(stock, proc.outputs)
+                processes_running.remove((end_cycle, proc))
 
-        # Now, try to start the new process
-        process = next(p for p in processes if p.name == process_name)
-        if not dose_stock_have_inputs(stock, process.inputs):
-            raise NotEnoughResourcesError(process_name, stock.inventory, process.inputs)
-        remove_from_stock(stock, process.inputs)
-        end_cycle = cycle + process.delay
-        processes_running.append((end_cycle, process))
-    for end_cycle, proc in processes_running:
-        if end_cycle > last_checked_cycle:
-            last_checked_cycle = end_cycle
-        add_to_stock(stock, proc.outputs)
+            # Now, try to start the new process
+            process = next(p for p in processes if p.name == process_name)
+            if not dose_stock_have_inputs(stock, process.inputs):
+                raise NotEnoughResourcesError(process_name, stock.inventory, process.inputs)
+            remove_from_stock(stock, process.inputs)
+            end_cycle = cycle + process.delay
+            processes_running.append((end_cycle, process))
+        for end_cycle, proc in processes_running:
+            if end_cycle > last_checked_cycle:
+                last_checked_cycle = end_cycle
+            add_to_stock(stock, proc.outputs)
+        return True
+    except Exception as e:
+        print_error_message(e)
+        return False
 
 def print_final_info(stock :Stock):
     print(f"Simulation ended at cycle {last_checked_cycle}.")
-    print("Final stock state:")
+    print("Final stock :")
     for resource, quantity in stock.inventory.items():
         print(f"- {resource}: {quantity}")
 
@@ -125,12 +132,16 @@ def main() -> int:
 
     stock, processes, _ = parse(args.input_file)
     parsed_lines = parse_trace(args.trace_file, processes)
+    exit_code = 0
     if not parsed_lines:
-        print_final_info(stock)
-        return 1
-    simulate_trace(parsed_lines, processes, stock)
+        exit_code = 1
+    else:
+        if not simulate_trace(parsed_lines, processes, stock):
+            exit_code = 1
+    if exit_code == 0:
+        print("Simulation completed successfully.")
     print_final_info(stock)
-    return 0
+    return exit_code
 
 
 if __name__ == '__main__':

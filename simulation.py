@@ -2,20 +2,29 @@ import logging
 import random
 import time
 
+from kr_config import POPULATION_SIZE
 from process import Process
 from stock import Stock
 from Manager import Manager
 from utils.is_time_up import is_time_up
 
 
-POPULATION_SIZE = 200
-
 logger = logging.getLogger()
 
 def get_top_five_percent() -> int:
+    """
+    Calculates the amount of individuals that equals five percent of the population.
+    :return: int
+    """
     return int(POPULATION_SIZE * 5 / 100)
 
 def next_generation(gen_id: int, sorted_population: list[Manager], stock: Stock, processes: list[Process], delay_max: float) -> list[Manager]:
+    """
+    Creates the next generation. Keeps the top five percent of the current population and moves them into the next one.
+    For the remaining ninety-five percent, picks two random individuals and "breed" them to obtain a new individual.
+    This "breeding" is performed using a uniform crossover to determine the new individual's processes' weights.
+    :return: list[Manager]
+    """
     top_five_percent = get_top_five_percent()
     remaining_managers_to_generate = POPULATION_SIZE - top_five_percent
     managers_score = [manager.score for manager in sorted_population]
@@ -37,12 +46,24 @@ def next_generation(gen_id: int, sorted_population: list[Manager], stock: Stock,
     return new_population
 
 def generate_individual(gen_id: int, stock: Stock, processes: list[Process], manager_id: int, end_timestamp: float) -> Manager:
+    """
+    Generates one individual.
+    :return: Manager
+    """
     return Manager(manager_id=manager_id, gen_id=gen_id, stock=stock, processes=processes, end_timestamp=end_timestamp)
 
 def generate_population(size: int, gen_id: int, stock: Stock, processes: list[Process], end_timestamp: float) -> list[Manager]:
+    """
+    Generates the population.
+    :return: list[Manager]
+    """
     return [generate_individual(gen_id, stock, processes, index + 1, end_timestamp) for index in range(size)]
 
 def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
+    """
+    Starts the program's main loop.
+    :return: None
+    """
     end_timestamp = time.monotonic() + delay_max
 
     population = generate_population(size=POPULATION_SIZE, gen_id=1, stock=stock, processes=processes, end_timestamp=end_timestamp)
@@ -50,14 +71,15 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
 
     generation_index = 0
     while True:
+        # After first generation, skips the first five percent of managers because they have already been run in previous generation
+        managers_to_run = population if generation_index == 0 else population[top_five_percent:]
+
         # Runs manager's lifecycle
-        for j, manager in enumerate(population):
+        for manager in managers_to_run:
             if is_time_up(end_timestamp):
                 logger.debug("Time is up")
                 break
-
-            if generation_index == 0 or j >= top_five_percent:
-                population[j].run()
+            manager.run()
 
         if is_time_up(end_timestamp):
             break
@@ -76,9 +98,9 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
     # The Manager Of All Time
     the_moat = sorted_population[0]
 
+    # Resets its stock before running it again, this time with printing enabled
     the_moat.reset(stock)
     the_moat.run(print_trace=True)
 
     logger.info("Manager Of All Time - Generation {} - Best score : {} | Final stock : {}"
-                .format(generation_index, the_moat.score, the_moat.stock))
-
+                .format(generation_index, the_moat.score, the_moat.stock.inventory))

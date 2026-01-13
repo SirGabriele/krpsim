@@ -12,5 +12,5 @@ livraison:(produit:1):(client_content:1):20
 #
 # optimize:(stock1|time;stock2|time;[...])
 #
-optimize:(client_content|time)
+optimize:(time;client_content)
 #

@@ -15,5 +15,5 @@ cuisson_5:(steak_mi_cuit:1;poele:1):(steak_cuit:1;poele:1):10
 #
 # optimize:(stock1|time;stock2|time;[...])
 #
-optimize:(steak_cuit|time)
+optimize:(time;steak_cuit)
 #

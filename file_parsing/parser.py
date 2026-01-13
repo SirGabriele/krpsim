@@ -1,3 +1,4 @@
+import logging
 import re
 
 from custom_exceptions.FileFormatError import FileFormatError
@@ -12,13 +13,14 @@ NUMERIC_EXPR = "\d+"
 
 STOCK_PATTERN_EXPR = "^(\w+):(\d+)$"
 PROCESS_PATTERN_EXPR = "^(\w+):(?:\((?:(\w+:\d+(?:;\w+:\d+)*))\))?:(?:\((?:(\w+:\d+(?:;\w+:\d+)*))\))?:(\d+)$"
-OPTIMIZE_PATTERN_EXPR = "^(optimize):\((?:(\w+\|time(?:;\w+\|time)*))\)$"
+OPTIMIZE_PATTERN_EXPR = "^(optimize):\(((?:\w+|time)(?:;(?:\w+|time))*)\)$"
 
+logger = logging.getLogger()
 
 def parse(input_file: str) -> tuple[Stock, list[Process]]:
     stock: Stock = Stock()
     processes: list[Process] = []
-    to_optimize: list[str] = []
+    to_optimize: set[str] = set()
 
     with open(input_file, 'r') as file:
         data = file.read()
@@ -88,17 +90,17 @@ def parse_process_line(stock_match: re.Match[str]) -> Process | None:
     return Process(name, inputs, outputs, delay)
 
 
-def parse_optimize_line(optimize_match: re.Match[str], inputs: list[str], outputs: list[str]) -> list[
-                                                                                                     str] | None:
+def parse_optimize_line(optimize_match: re.Match[str], inputs: list[str], outputs: list[str]) -> set[str]:
     # Names of stocks to optimize are in the second group in <optimize:(stock1|time;stock2|time;[...])>
     groups = optimize_match.group(2).split(';')
-    resources_to_optimize = []
-    for group in groups:
-        resource_to_optimize = group.split('|')[0]
-        if resource_to_optimize in inputs or resource_to_optimize in outputs:
-            resources_to_optimize.append(resource_to_optimize)
+    resources_to_optimize = set()
+
+    for resource_to_optimize in groups:
+        if resource_to_optimize in inputs or resource_to_optimize in outputs or resource_to_optimize == "time":
+            resources_to_optimize.add(resource_to_optimize)
         else:
-            return []
+            logger.debug(f"Incorrect resource to optimize: {resource_to_optimize}")
+            return set()
     return resources_to_optimize
 
 

@@ -6,7 +6,7 @@ from process import Process
 @dataclass
 class Stock:
     inventory: dict[str, int] = field(default_factory=dict, init=False)
-    resources_to_optimize: list[str] = field(default_factory=list, init=False)
+    resources_to_optimize: set[str] = field(default_factory=set, init=False)
 
     def clone(self) -> "Stock":
         new = Stock()
@@ -49,4 +49,4 @@ class Stock:
         return True
 
     def __str__(self) -> str:
-        return f"Stock: stock={self.inventory}, resources_to_optimize={self.resources_to_optimize}"
+        return f"Stock: inventory={self.inventory}, resources_to_optimize={self.resources_to_optimize}"

@@ -15,5 +15,5 @@ se_battre_dans_la_cours:(moi:1):(moi:1;bonbon:1):50
 #
 # optimize:(stock1|time;stock2|time;[...])
 #
-optimize:(marelle|time)
+optimize:(marelle)
 #

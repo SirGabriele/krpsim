@@ -8,5 +8,5 @@ depenser_argent:(euro:1)::10
 #
 # optimize:(stock1|time;stock2|time;[...])
 #
-optimize:(euro|time)
+optimize:(euro)
 #

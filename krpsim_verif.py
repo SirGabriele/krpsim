@@ -28,8 +28,6 @@ def parse_trace_line(trace_line: str, processes: list[Process]) -> tuple[int, st
     if not match:
         raise InvalidTraceLineError(trace_line)
     cycle = match.group(1)
-    if not cycle.isdigit():
-        raise ValueError(f"Cycle '{cycle}' is not a valid integer.")
     process_name = match.group(2)
     process_exists = any(p.name == process_name for p in processes)
     if not process_exists:
@@ -46,7 +44,7 @@ def parse_trace(trace_file: str, processes: list[Process]) -> list[tuple[int, st
     """
     try:
         parsed_lines: list[tuple[int, str]] = []
-        with open(trace_file) as trace:
+        with open(trace_file, 'r') as trace:
             last_cycle = 0
             for index, line in enumerate(trace):
                 cycle, process_name = parse_trace_line(line.strip(), processes)
@@ -115,7 +113,7 @@ class KrpSimVerifier:
         :param cycle_limit: The cycle limit up to which processes should be completed.
         :return: None
         """
-        finished = [pr for pr in self.running_processes if pr[0] <= cycle_limit]
+        finished = [rp for rp in self.running_processes if rp[0] <= cycle_limit]
 
         for end_cycle, proc in finished:
             self._add_to_stock(proc.outputs)

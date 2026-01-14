@@ -29,6 +29,7 @@ def next_generation(gen_id: int, sorted_population: list[Manager], stock: Stock,
     remaining_managers_to_generate = POPULATION_SIZE - top_five_percent
     managers_score = [manager.score for manager in sorted_population]
     new_population = sorted_population[:top_five_percent]
+    end_timestamp = time.monotonic() + delay_max
 
     for i in range(remaining_managers_to_generate):
         # Selects two random distinct managers to breed
@@ -41,16 +42,16 @@ def next_generation(gen_id: int, sorted_population: list[Manager], stock: Stock,
             # Uniform crossover. Each weight has a 50% chance to be from parent one and a 50% chance to be from parent two
             weights[process.name] = parent_one.weights[process.name] if random.random() < 0.5 else parent_two.weights[process.name]
 
-        new_population.append(Manager(manager_id=i + 1, gen_id=gen_id, stock=stock, processes=processes, end_timestamp=delay_max, weights=weights))
+        new_population.append(generate_individual(manager_id=i + 1, gen_id=gen_id, stock=stock, processes=processes, end_timestamp=end_timestamp, weights=weights))
 
     return new_population
 
-def generate_individual(gen_id: int, stock: Stock, processes: list[Process], manager_id: int, end_timestamp: float) -> Manager:
+def generate_individual(gen_id: int, stock: Stock, processes: list[Process], manager_id: int, end_timestamp: float, weights: dict[str, float] | None = None) -> Manager:
     """
     Generates one individual.
     :return: Manager
     """
-    return Manager(manager_id=manager_id, gen_id=gen_id, stock=stock, processes=processes, end_timestamp=end_timestamp)
+    return Manager(manager_id=manager_id, gen_id=gen_id, stock=stock, processes=processes, end_timestamp=end_timestamp, weights=weights)
 
 def generate_population(size: int, gen_id: int, stock: Stock, processes: list[Process], end_timestamp: float) -> list[Manager]:
     """
@@ -82,6 +83,7 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
             manager.run()
 
         if is_time_up(end_timestamp):
+            logger.debug("Time is up")
             break
 
         # Sorts managers by their score in descending order
@@ -99,7 +101,8 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
     the_moat = sorted_population[0]
 
     # Resets its stock before running it again, this time with printing enabled
-    the_moat.reset(stock)
+    end_timestamp = time.monotonic() + delay_max
+    the_moat.reset(stock, end_timestamp)
     the_moat.run(print_trace=True)
 
     logger.info("Manager Of All Time - Generation {} - Best score : {} | Final stock : {}"

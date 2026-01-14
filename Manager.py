@@ -40,7 +40,7 @@ class Manager:
         self.print_trace = False
         self.__mutate()
 
-    def reset(self, stock: Stock) -> None:
+    def reset(self, stock: Stock, end_timestamp: float) -> None:
         """
         Resets the manager's state to erase its previous execution.
         :return: None
@@ -51,6 +51,7 @@ class Manager:
         self.cycle = 0
         self.nb_completed_processes = 0
         self.processes_in_progress = []
+        self.end_timestamp = end_timestamp
 
     def run(self, print_trace: bool = False) -> None:
         """
@@ -61,7 +62,7 @@ class Manager:
         self.print_trace = print_trace
 
         while ((self.nb_completed_processes < MAX_COMPLETED_PROCESSES_PER_MANAGER and self.cycle < MAX_CYCLE_PER_MANAGER)
-               and (not is_time_up(self.end_timestamp) or print_trace)):
+               and not is_time_up(self.end_timestamp)):
             completed_processes_count = self.__complete_processes()
             self.nb_completed_processes += completed_processes_count
             launched_processes = self.__launch_processes()
@@ -90,7 +91,8 @@ class Manager:
         :return: int - The amount of completed processes.
         """
         completed_processes = 0
-        while self.processes_in_progress and self.__get_next_process_to_complete_remaining_duration() <= self.cycle:
+        while (self.processes_in_progress and self.__get_next_process_to_complete_remaining_duration() <= self.cycle
+            and not is_time_up(self.end_timestamp)):
             _, _, process = heapq.heappop(self.processes_in_progress)
             if process.outputs is not None:
                 for output, quantity in process.outputs.items():
@@ -106,7 +108,7 @@ class Manager:
         launched_processes = []
         launchable_processes = self.__get_launchable_processes()
 
-        while launchable_processes:
+        while launchable_processes and not is_time_up(self.end_timestamp):
             # Creates a list containing all weights of each launchable process
             processes_weights = [self.weights.get(process.name, 0) for process in launchable_processes]
 
@@ -116,6 +118,9 @@ class Manager:
 
             # Keeps track of launched processes
             launched_processes.append(process_to_launch)
+
+            if process_to_launch.name == "wait":
+                break
 
             # Gets new list of launchable processes
             launchable_processes = self.__get_launchable_processes()

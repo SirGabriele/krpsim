@@ -4,13 +4,13 @@ import heapq
 import logging
 import random
 
-from kr_config import MAX_COMPLETED_PROCESSES_PER_MANAGER, MAX_CYCLE_PER_MANAGER
+from kr_config import MAX_WEIGHT, MAX_CYCLE_PER_MANAGER
 from process import Process
 from stock import Stock
 from utils.is_time_up import is_time_up
 
-
 logger = logging.getLogger()
+
 
 class Manager:
     def __init__(self,
@@ -18,20 +18,16 @@ class Manager:
                  gen_id: int,
                  stock: Stock,
                  processes: list[Process],
+                 resources: set[str],
                  end_timestamp: float,
                  weights: dict[str, float] | None = None
                  ):
         self.id = manager_id
         self.gen_id = gen_id
         self.processes = processes
-        self.weights = (
-            {process.name: random.random() for process in processes}
-            if weights is None
-            else weights
-        )
-        self.random_seed = random.randint(0, 100000)
-        self.rng_seed = random.Random(self.random_seed)
+        self.resources = resources
         self.stock = stock.clone()
+        self.weights = self.__create_weights(weights)
         self.end_timestamp = end_timestamp
         self.processes_in_progress = []
         self.score = 0
@@ -40,13 +36,23 @@ class Manager:
         self.print_trace = False
         self.__mutate()
 
+    def __create_weights(self, weights: dict[str, float]) -> dict[str, float]:
+        weights = (
+            {resource: random.randint(0, MAX_WEIGHT) for resource in self.resources}
+            if weights is None
+            else weights.copy()
+        )
+        for resource_to_optimize in self.stock.resources_to_optimize:
+            if not resource_to_optimize == "time":
+                weights[resource_to_optimize] = MAX_WEIGHT * 1000000
+        return weights
+
     def reset(self, stock: Stock, end_timestamp: float) -> None:
         """
         Resets the manager's state to erase its previous execution.
         :return: None
         """
         self.stock = stock.clone()
-        self.rng_seed = random.Random(self.random_seed)
         self.score = 0
         self.cycle = 0
         self.nb_completed_processes = 0
@@ -60,9 +66,9 @@ class Manager:
         :return: None
         """
         self.print_trace = print_trace
-
-        while ((self.nb_completed_processes < MAX_COMPLETED_PROCESSES_PER_MANAGER and self.cycle < MAX_CYCLE_PER_MANAGER)
-               and not is_time_up(self.end_timestamp)):
+        logger.info("Running Generation [%d] - Manager [%d]", self.gen_id, self.id)
+        logger.info(self.weights)
+        while self.cycle < MAX_CYCLE_PER_MANAGER and not is_time_up(self.end_timestamp):
             completed_processes_count = self.__complete_processes()
             self.nb_completed_processes += completed_processes_count
             launched_processes = self.__launch_processes()
@@ -71,7 +77,7 @@ class Manager:
                 if self.processes_in_progress:
                     self.cycle = self.__get_next_process_to_complete_remaining_duration()
                 else:
-                    logger.debug("Generation [%d] - Manager [%d] - No action can be done", self.gen_id, self.id)
+                    logger.debug("Generation [%d] - Manager [%d] - No action can be done", self.gen_id - 1, self.id)
                     if self.print_trace:
                         print(f"No more process doable at time {self.cycle + 1}")
                     break
@@ -92,13 +98,41 @@ class Manager:
         """
         completed_processes = 0
         while (self.processes_in_progress and self.__get_next_process_to_complete_remaining_duration() <= self.cycle
-            and not is_time_up(self.end_timestamp)):
+               and not is_time_up(self.end_timestamp)):
             _, _, process = heapq.heappop(self.processes_in_progress)
             if process.outputs is not None:
                 for output, quantity in process.outputs.items():
                     self.stock.add(output, quantity)
             completed_processes += 1
         return completed_processes
+
+    def __score_process(self, process: Process) -> float:
+        expenses = 0
+        if process.inputs is not None:
+            for input_resource, input_quantity in process.inputs.items():
+                expenses += self.weights.get(input_resource, 0) * input_quantity
+        income = 0
+        if process.outputs is not None:
+            for output_resource, output_quantity in process.outputs.items():
+                income += self.weights.get(output_resource, 0) * output_quantity
+        delay = process.delay if process.delay > 0 else 1
+        return (income - expenses) / delay
+
+    def __get_process_to_launch(self, launchable_processes: list[Process]) -> Process | None:
+        """
+        Selects the process to launch among the launchable ones.
+        :return: Process
+        """
+        best_process = launchable_processes[0]
+        best_score = self.__score_process(best_process)
+        for process in launchable_processes[1:]:
+            process_score = self.__score_process(process)
+            if process_score > best_score:
+                best_process = process
+                best_score = process_score
+        if best_score <= 0:
+            return None
+        return best_process
 
     def __launch_processes(self) -> list[Process]:
         """
@@ -108,12 +142,11 @@ class Manager:
         launched_processes = []
         launchable_processes = self.__get_launchable_processes()
 
-        while launchable_processes and not is_time_up(self.end_timestamp):
-            # Creates a list containing all weights of each launchable process
-            processes_weights = [self.weights.get(process.name, 0) for process in launchable_processes]
 
-            # Selects the process to launch among the launchable ones
-            process_to_launch = self.rng_seed.choices(population=launchable_processes, weights=processes_weights, k=1)[0]
+        while launchable_processes and not is_time_up(self.end_timestamp):
+            process_to_launch = self.__get_process_to_launch(launchable_processes)
+            if process_to_launch is None:
+                break
             self.__launch_process(process_to_launch)
 
             # Keeps track of launched processes
@@ -149,16 +182,37 @@ class Manager:
         Evaluates the manager's score for this generation.
         :return: None
         """
-        for resource in self.stock.resources_to_optimize:
-            self.score += self.stock.get_quantity(resource) * 100000
+        for resource, quantity in self.stock.inventory.items():
+            if resource not in self.stock.resources_to_optimize:
+                self.score += self.weights.get(resource, 0) * quantity
         self.score += self.nb_completed_processes
+
+    def __reverse_weights(self) -> None:
+        active_keys = [k for k in self.weights if k not in self.stock.resources_to_optimize]
+        sorted_keys = sorted(active_keys, key=self.weights.get)
+
+        active_values = [self.weights[k] for k in active_keys]
+        reversed_values = sorted(active_values, reverse=True)
+
+        result = self.weights.copy()
+
+        for key, new_value in zip(sorted_keys, reversed_values):
+            result[key] = new_value
+        self.weights = result
 
     def __mutate(self) -> None:
         """
         Performs mutation on the manager.
         :return: None
         """
-        for process in self.processes:
-            if random.uniform(0, 1) >= 0.75:
-                self.weights[process.name] += random.uniform(-0.05, 0.05)
-                self.weights[process.name] = max(min(1.0, self.weights[process.name]), 0.001)
+        for resource in self.resources:
+            if resource in self.stock.resources_to_optimize:
+                continue
+            if random.uniform(0, 1) >= 0.9:
+                self.weights[resource] += random.uniform(-0.05 * MAX_WEIGHT, 0.05 * MAX_WEIGHT)
+                self.weights[resource] = max(min(self.weights[resource], 0), MAX_WEIGHT)
+            if random.uniform(0, 1) >= 0.95:
+                self.weights[resource] += random.uniform(-0.2 * MAX_WEIGHT, 0.2 * MAX_WEIGHT)
+                self.weights[resource] = max(min(self.weights[resource], 0), MAX_WEIGHT)
+        if random.uniform(0, 1) >= 0.99:
+            self.__reverse_weights()

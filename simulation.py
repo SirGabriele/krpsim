@@ -18,7 +18,7 @@ def get_top_five_percent() -> int:
     """
     return int(POPULATION_SIZE * 5 / 100)
 
-def next_generation(gen_id: int, sorted_population: list[Manager], stock: Stock, processes: list[Process], delay_max: float) -> list[Manager]:
+def next_generation(gen_id: int, sorted_population: list[Manager], stock: Stock, processes: list[Process], resources: set[str], delay_max: float) -> list[Manager]:
     """
     Creates the next generation. Keeps the top five percent of the current population and moves them into the next one.
     For the remaining ninety-five percent, picks two random individuals and "breed" them to obtain a new individual.
@@ -38,27 +38,42 @@ def next_generation(gen_id: int, sorted_population: list[Manager], stock: Stock,
             parent_two = random.choices(sorted_population, weights=managers_score, k=1)[0]
 
         weights: dict[str, float] = {}
-        for process in processes:
+        for resource in resources:
             # Uniform crossover. Each weight has a 50% chance to be from parent one and a 50% chance to be from parent two
-            weights[process.name] = parent_one.weights[process.name] if random.random() < 0.5 else parent_two.weights[process.name]
+            weights[resource] = parent_one.weights[resource] if random.random() < 0.5 else parent_two.weights[resource]
 
-        new_population.append(generate_individual(manager_id=i + 1, gen_id=gen_id, stock=stock, processes=processes, end_timestamp=end_timestamp, weights=weights))
+        new_population.append(generate_individual(manager_id=i + 1, gen_id=gen_id, stock=stock, processes=processes, resources=resources, end_timestamp=end_timestamp, weights=weights))
 
     return new_population
 
-def generate_individual(gen_id: int, stock: Stock, processes: list[Process], manager_id: int, end_timestamp: float, weights: dict[str, float] | None = None) -> Manager:
+def generate_individual(gen_id: int, stock: Stock, processes: list[Process], resources: set[str], manager_id: int, end_timestamp: float, weights: dict[str, float] | None = None) -> Manager:
     """
     Generates one individual.
     :return: Manager
     """
-    return Manager(manager_id=manager_id, gen_id=gen_id, stock=stock, processes=processes, end_timestamp=end_timestamp, weights=weights)
+    return Manager(manager_id=manager_id, gen_id=gen_id, stock=stock, processes=processes, resources=resources, end_timestamp=end_timestamp, weights=weights)
 
-def generate_population(size: int, gen_id: int, stock: Stock, processes: list[Process], end_timestamp: float) -> list[Manager]:
+def get_all_resources(processes: list[Process]) -> set[str]:
+    """
+    Returns a set of all resources involved in the processes.
+    :return: set[str]
+    """
+    resources: set[str] = set()
+    for process in processes:
+        if process.inputs is not None:
+            for input_resource in process.inputs.keys():
+                resources.add(input_resource)
+        if process.outputs is not None:
+            for output_resource in process.outputs.keys():
+                resources.add(output_resource)
+    return resources
+
+def generate_population(size: int, gen_id: int, stock: Stock, processes: list[Process], resources: set[str], end_timestamp: float) -> list[Manager]:
     """
     Generates the population.
     :return: list[Manager]
     """
-    return [generate_individual(gen_id, stock, processes, index + 1, end_timestamp) for index in range(size)]
+    return [generate_individual(gen_id, stock, processes, resources, index + 1, end_timestamp) for index in range(size)]
 
 def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
     """
@@ -67,7 +82,8 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
     """
     end_timestamp = time.monotonic() + delay_max
 
-    population = generate_population(size=POPULATION_SIZE, gen_id=1, stock=stock, processes=processes, end_timestamp=end_timestamp)
+    resources = get_all_resources(processes)
+    population = generate_population(size=POPULATION_SIZE, gen_id=1, stock=stock, processes=processes, resources=resources, end_timestamp=end_timestamp)
     top_five_percent = get_top_five_percent()
 
     generation_index = 0
@@ -92,7 +108,7 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
                      .format(generation_index, sorted_population[0].score, sorted_population[0].stock))
 
         # Creates next population from previous one
-        population = next_generation(generation_index + 1, sorted_population, stock, processes, end_timestamp)
+        population = next_generation(generation_index + 1, sorted_population, stock, processes, resources, end_timestamp)
 
         generation_index += 1
 
@@ -105,5 +121,5 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
     the_moat.reset(stock, end_timestamp)
     the_moat.run(print_trace=True)
 
-    logger.info("Manager Of All Time - Generation {} - Best score : {} | Final stock : {}"
-                .format(generation_index, the_moat.score, the_moat.stock.inventory))
+    logger.info("Manager Of All Time - Generation {} - Manager {} - Best score : {} | Final stock : {} | Weights : {}"
+                .format(generation_index, the_moat.id, the_moat.score, the_moat.stock.inventory, the_moat.weights))

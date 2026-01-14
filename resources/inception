@@ -20,5 +20,5 @@ end_dream:(dream:3):(clock:1):60
 #
 # optimize:(stock1|time;stock2|time;[...])
 #
-optimize:(year|time)
+optimize:(year)
 #

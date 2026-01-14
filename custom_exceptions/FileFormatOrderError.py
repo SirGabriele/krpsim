@@ -5,4 +5,4 @@ class FileFormatOrderError(Exception):
         super().__init__(self.message)
 
     def __str__(self):
-        return f"FileFormatError: {self.message}"
+        return f"FileFormatOrderError: {self.message}"

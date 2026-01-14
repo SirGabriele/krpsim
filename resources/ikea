@@ -13,5 +13,5 @@ do_armoire_ikea:(montant:2;fond:1;etagere:3):(armoire:1):30
 #
 # optimize:(stock1|time;stock2|time;[...])
 #
-optimize:(armoire|time)
+optimize:(time;armoire)
 #

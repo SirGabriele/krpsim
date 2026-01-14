@@ -1,9 +1,11 @@
+import logging
 import re
 
 from custom_exceptions.FileFormatError import FileFormatError
 from custom_exceptions.FileFormatOrderError import FileFormatOrderError
 from process import Process
 from stock import Stock
+from utils.display_config_file_data import display_config_file_data
 
 
 ALLOWED_CHAR_EXPR = "\w+"
@@ -11,13 +13,14 @@ NUMERIC_EXPR = "\d+"
 
 STOCK_PATTERN_EXPR = "^(\w+):(\d+)$"
 PROCESS_PATTERN_EXPR = "^(\w+):(?:\((?:(\w+:\d+(?:;\w+:\d+)*))\))?:(?:\((?:(\w+:\d+(?:;\w+:\d+)*))\))?:(\d+)$"
-OPTIMIZE_PATTERN_EXPR = "^(optimize):\((?:(\w+\|time(?:;\w+\|time)*))\)$"
+OPTIMIZE_PATTERN_EXPR = "^(optimize):\(((?:\w+|time)(?:;(?:\w+|time))*)\)$"
 
+logger = logging.getLogger()
 
-def parse(input_file: str) -> tuple[Stock, list[Process], list[str]]:
+def parse(input_file: str) -> tuple[Stock, list[Process]]:
     stock: Stock = Stock()
     processes: list[Process] = []
-    to_optimize: list[str] = []
+    to_optimize: set[str] = set()
 
     with open(input_file, 'r') as file:
         data = file.read()
@@ -50,13 +53,23 @@ def parse(input_file: str) -> tuple[Stock, list[Process], list[str]]:
                 raise FileFormatError(line)
             if not stock.inventory or not processes:
                 raise FileFormatOrderError()
-            to_optimize = parse_optimize_line(optimize_match)
+            to_optimize = parse_optimize_line(
+                optimize_match,
+                [key for process in processes for key in process.inputs or {}],
+                [key for process in processes for key in process.outputs or {}]
+            )
+            stock.resources_to_optimize = to_optimize
 
         # Unknown line
         else:
             raise FileFormatError(line)
 
-    return stock, processes, to_optimize
+    if not to_optimize:
+        raise FileFormatOrderError()
+
+    display_config_file_data(len(processes), len(stock.inventory), len(stock.resources_to_optimize))
+
+    return stock, processes
 
 
 def parse_stock_line(stock_match: re.Match[str]) -> tuple[str, int] | None:
@@ -77,9 +90,18 @@ def parse_process_line(stock_match: re.Match[str]) -> Process | None:
     return Process(name, inputs, outputs, delay)
 
 
-def parse_optimize_line(optimize_match: re.Match[str]) -> list[str] | None:
+def parse_optimize_line(optimize_match: re.Match[str], inputs: list[str], outputs: list[str]) -> set[str]:
     # Names of stocks to optimize are in the second group in <optimize:(stock1|time;stock2|time;[...])>
-    return optimize_match.group(2).split(';')
+    groups = optimize_match.group(2).split(';')
+    resources_to_optimize = set()
+
+    for resource_to_optimize in groups:
+        if resource_to_optimize in inputs or resource_to_optimize in outputs or resource_to_optimize == "time":
+            resources_to_optimize.add(resource_to_optimize)
+        else:
+            logger.debug(f"Incorrect resource to optimize: {resource_to_optimize}")
+            return set()
+    return resources_to_optimize
 
 
 def parse_resource_quantity_list(rq_list_str: str) -> dict:

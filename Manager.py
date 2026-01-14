@@ -119,9 +119,6 @@ class Manager:
             # Keeps track of launched processes
             launched_processes.append(process_to_launch)
 
-            if process_to_launch.name == "wait":
-                break
-
             # Gets new list of launchable processes
             launchable_processes = self.__get_launchable_processes()
         return launched_processes

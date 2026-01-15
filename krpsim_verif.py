@@ -164,7 +164,7 @@ def main() -> int:
     parser = argparse_verif_init()
     args = parser.parse_args()
 
-    stock, processes, _ = parse(args.input_file)
+    stock, processes = parse(args.input_file)
     parsed_lines = parse_trace(args.trace_file, processes)
 
     exit_code = 0
@@ -187,7 +187,6 @@ if __name__ == '__main__':
     try:
         sys.exit(main())
     except Exception as err:
-        if kr_config.DEBUG:
-            traceback.print_exc()
+        traceback.print_exc()
         print(err)
         sys.exit(1)

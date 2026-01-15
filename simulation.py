@@ -88,22 +88,11 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
     top_five_percent = get_top_five_percent()
 
     generation_index = 0
-    avg_gen_duration = 0.0
     with Pool(processes=cpu_count()) as pool:
         while True:
             if is_time_up(end_timestamp):
                 logger.debug("Time is up (Start of loop)")
                 break
-
-            current_time = time.monotonic()
-            remaining_time = end_timestamp - current_time
-
-            if generation_index > 0 and remaining_time < (avg_gen_duration * 1.1):
-                logger.info(
-                    f"Arrêt préventif : Temps restant ({remaining_time:.2f}s) insuffisant pour une nouvelle génération (~{avg_gen_duration:.2f}s)")
-                break
-
-            gen_start_time = time.monotonic()
 
             if generation_index == 0:
                 managers_to_run = population
@@ -115,19 +104,9 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
             ran_managers = pool.map(run_manager_simulation, managers_to_run)
             population = managers_skipped + ran_managers
 
-            # Calcul du temps écoulé pour cette génération
-            gen_duration = time.monotonic() - gen_start_time
-            # Mise à jour de la moyenne glissante (pour lisser les écarts)
-            if generation_index == 0:
-                avg_gen_duration = gen_duration
-            else:
-                avg_gen_duration = (avg_gen_duration + gen_duration) / 2
-
-            # Tri et logs
             sorted_population = sorted(population, key=lambda m: m.score, reverse=True)
             print("Generation {} - Best score : {} | Final stock : {}\033[K".format(generation_index, sorted_population[0].score, sorted_population[0].stock.inventory), end="\r", flush=True)
 
-            # Création génération suivante avec le timestamp ABSOLU
             population = next_generation(generation_index + 1, sorted_population, stock, processes,
                                          end_timestamp)
 

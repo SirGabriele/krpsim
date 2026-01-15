@@ -3,8 +3,9 @@ from __future__ import annotations
 import heapq
 import logging
 import random
+from uuid import uuid4
 
-from kr_config import MAX_COMPLETED_PROCESSES_PER_MANAGER, MAX_CYCLE_PER_MANAGER
+from kr_config import MAX_COMPLETED_PROCESSES_PER_MANAGER, MAX_CYCLE_PER_MANAGER, MUTATION_RATE
 from process import Process
 from stock import Stock
 from utils.is_time_up import is_time_up
@@ -19,16 +20,19 @@ class Manager:
                  stock: Stock,
                  processes: list[Process],
                  end_timestamp: float,
-                 weights: dict[str, float] | None = None
+                 weights: dict[str, float] | None = None,
+                 random_wait_uuid: str = None
                  ):
         self.id = manager_id
         self.gen_id = gen_id
         self.processes = processes
+        self.random_wait_uuid = random_wait_uuid if random_wait_uuid is not None else str(uuid4())
         self.weights = (
             {process.name: random.random() for process in processes}
             if weights is None
             else weights
         )
+        self.weights[self.random_wait_uuid] = random.random()
         self.random_seed = random.randint(0, 100000)
         self.rng_seed = random.Random(self.random_seed)
         self.stock = stock.clone()
@@ -60,7 +64,7 @@ class Manager:
         :return: None
         """
         self.print_trace = print_trace
-
+        #print("Generation [{}] - Manager [{}]".format(self.gen_id, self.id))
         while ((self.nb_completed_processes < MAX_COMPLETED_PROCESSES_PER_MANAGER and self.cycle < MAX_CYCLE_PER_MANAGER)
                and not is_time_up(self.end_timestamp)):
             completed_processes_count = self.__complete_processes()
@@ -71,9 +75,6 @@ class Manager:
                 if self.processes_in_progress:
                     self.cycle = self.__get_next_process_to_complete_remaining_duration()
                 else:
-                    logger.debug("Generation [%d] - Manager [%d] - No action can be done", self.gen_id, self.id)
-                    if self.print_trace:
-                        print(f"No more process doable at time {self.cycle + 1}")
                     break
         self.__evaluate()
 
@@ -109,11 +110,13 @@ class Manager:
         launchable_processes = self.__get_launchable_processes()
 
         while launchable_processes and not is_time_up(self.end_timestamp):
+            launchable_processes.append(None)
             # Creates a list containing all weights of each launchable process
-            processes_weights = [self.weights.get(process.name, 0) for process in launchable_processes]
-
+            processes_weights = [self.weights.get(process.name, 0) if process is not None else self.weights[self.random_wait_uuid] for process in launchable_processes]
             # Selects the process to launch among the launchable ones
             process_to_launch = self.rng_seed.choices(population=launchable_processes, weights=processes_weights, k=1)[0]
+            if process_to_launch is None:
+                break
             self.__launch_process(process_to_launch)
 
             # Keeps track of launched processes
@@ -140,7 +143,6 @@ class Manager:
         if process.inputs is not None:
             for required_input, required_quantity in process.inputs.items():
                 self.stock.consume(required_input, required_quantity)
-        logger.debug("Generation [{}] - Manager [{}] - Launch process '{}'".format(self.gen_id, self.id, process.name))
         if self.print_trace:
             print(f"{self.cycle}:{process.name}")
 
@@ -151,14 +153,16 @@ class Manager:
         """
         for resource in self.stock.resources_to_optimize:
             self.score += self.stock.get_quantity(resource) * 100000
-        self.score += self.nb_completed_processes
+        self.score -= self.nb_completed_processes
+        self.score -= self.cycle
 
     def __mutate(self) -> None:
-        """
-        Performs mutation on the manager.
-        :return: None
-        """
         for process in self.processes:
-            if random.uniform(0, 1) >= 0.75:
-                self.weights[process.name] += random.uniform(-0.05, 0.05)
+            if random.random() < MUTATION_RATE:
+                delta = random.gauss(0, 0.1)
+                self.weights[process.name] += delta
                 self.weights[process.name] = max(min(1.0, self.weights[process.name]), 0.001)
+
+        if random.random() < MUTATION_RATE:
+            self.weights[self.random_wait_uuid] += random.gauss(0, 0.1)
+            self.weights[self.random_wait_uuid] = max(min(1.0, self.weights[self.random_wait_uuid]), 0.001)

@@ -3,6 +3,7 @@ from __future__ import annotations
 import heapq
 import logging
 import random
+from math import inf
 
 from kr_config import MAX_WEIGHT, MAX_CYCLE_PER_MANAGER
 from process import Process
@@ -19,6 +20,7 @@ class Manager:
                  stock: Stock,
                  processes: list[Process],
                  resources: set[str],
+                 resources_heatmap: dict[str, float],
                  end_timestamp: float,
                  weights: dict[str, float] | None = None
                  ):
@@ -26,9 +28,11 @@ class Manager:
         self.gen_id = gen_id
         self.processes = processes
         self.resources = resources
+        self.resources_heatmap = resources_heatmap
         self.stock = stock.clone()
         self.weights = self.__create_weights(weights)
         self.end_timestamp = end_timestamp
+        self.current_delay = 0
         self.processes_in_progress = []
         self.score = 0
         self.cycle = 0
@@ -44,7 +48,7 @@ class Manager:
         )
         for resource_to_optimize in self.stock.resources_to_optimize:
             if not resource_to_optimize == "time":
-                weights[resource_to_optimize] = MAX_WEIGHT * 1000000
+                weights[resource_to_optimize] = MAX_WEIGHT * 1000
         return weights
 
     def reset(self, stock: Stock, end_timestamp: float) -> None:
@@ -65,46 +69,62 @@ class Manager:
         and that time is not up.
         :return: None
         """
+        logger.info("Generation [{}] - Manager [{}] - Starting simulation".format(self.gen_id, self.id))
         self.print_trace = print_trace
-        logger.info("Running Generation [%d] - Manager [%d]", self.gen_id, self.id)
-        logger.info(self.weights)
-        while self.cycle < MAX_CYCLE_PER_MANAGER and not is_time_up(self.end_timestamp):
-            completed_processes_count = self.__complete_processes()
-            self.nb_completed_processes += completed_processes_count
-            launched_processes = self.__launch_processes()
+        self.current_delay = 0
+        while self.current_delay < MAX_CYCLE_PER_MANAGER:
 
-            if completed_processes_count == 0 and not launched_processes:
-                if self.processes_in_progress:
-                    self.cycle = self.__get_next_process_to_complete_remaining_duration()
+            # --- A. SÉCURITÉ RÉELLE ---
+            # Si le programme tourne depuis 10 secondes (temps réel), on coupe tout.
+            if is_time_up(self.end_timestamp):
+                break
+
+            # --- B. RÉCOLTE (Harvest) ---
+            # On regarde le tas : Est-ce qu'il y a des process finis maintenant (ou avant) ?
+            while self.processes_in_progress and self.processes_in_progress[0][0] <= self.current_delay:
+                end_time, _, process = heapq.heappop(self.processes_in_progress)
+                # On encaisse les gains
+                if process.outputs:
+                    for res, qty in process.outputs.items():
+                        self.stock.add(res, qty)
+
+                self.nb_completed_processes += 1
+
+            # --- C. LANCEMENT (Decision) ---
+            # Avec les nouveaux stocks, on lance tout ce qu'on peut
+            while True:
+                # La méthode fait tout : recherche, choix et lancement
+                did_launch = self.__find_and_launch_best_process()
+
+                if did_launch:
+                    did_launch_something = True
                 else:
-                    logger.debug("Generation [%d] - Manager [%d] - No action can be done", self.gen_id - 1, self.id)
-                    if self.print_trace:
-                        print(f"No more process doable at time {self.cycle + 1}")
-                    break
+                    break  # Plus rien à lancer
+
+            # --- D. SAUT TEMPOREL (Le Kangourou) ---
+
+            # S'il n'y a plus aucun processus en cours...
+            if not self.processes_in_progress:
+                # ... et qu'on n'a rien lancé de nouveau à l'étape C
+                # Alors on est bloqué ou on a fini. On arrête la simulation.
+                break
+
+            # On regarde quelle est la prochaine échéance dans le futur
+            if not self.processes_in_progress:
+                break
+            next_wakeup_time = self.processes_in_progress[0][0]
+
+            # SAUT ! On met à jour l'heure virtuelle.
+            # Si le prochain événement est plus tard, on avance d'un coup.
+            if next_wakeup_time > self.current_delay:
+                self.current_delay = next_wakeup_time
+            else:
+                # Cas rare : Si un process a duré 0 cycle, on est déjà à la bonne heure.
+                # On boucle juste pour le récolter à l'étape B.
+                pass
+
+            # Simulation terminée : On calcule le score
         self.__evaluate()
-
-    def __get_next_process_to_complete_remaining_duration(self) -> int:
-        """
-        Gets the remaining duration until the next process completes.
-        :return: int
-        """
-        return self.processes_in_progress[0][0]
-
-    def __complete_processes(self) -> int:
-        """
-        Completes the execution of processes tge cycle duration of which is elapsed
-        If the process has outputs, adds them to the stock.
-        :return: int - The amount of completed processes.
-        """
-        completed_processes = 0
-        while (self.processes_in_progress and self.__get_next_process_to_complete_remaining_duration() <= self.cycle
-               and not is_time_up(self.end_timestamp)):
-            _, _, process = heapq.heappop(self.processes_in_progress)
-            if process.outputs is not None:
-                for output, quantity in process.outputs.items():
-                    self.stock.add(output, quantity)
-            completed_processes += 1
-        return completed_processes
 
     def __score_process(self, process: Process) -> float:
         expenses = 0
@@ -118,43 +138,41 @@ class Manager:
         delay = process.delay if process.delay > 0 else 1
         return (income - expenses) / delay
 
-    def __get_process_to_launch(self, launchable_processes: list[Process]) -> Process | None:
+    def __find_and_launch_best_process(self) -> bool:
         """
-        Selects the process to launch among the launchable ones.
-        :return: Process
+        Cherche le meilleur process et le lance directement.
+        Retourne True si on a lancé un truc, False sinon.
         """
-        best_process = launchable_processes[0]
-        best_score = self.__score_process(best_process)
-        for process in launchable_processes[1:]:
-            process_score = self.__score_process(process)
-            if process_score > best_score:
+        best_process = None
+        best_score = -inf  # Ou -infinity si tu acceptes les scores négatifs
+
+        # On parcourt TOUS les process une seule fois
+        for process in self.processes:
+
+            # 1. Check rapide : Stocks suffisants ?
+            # (Optimisation: coder can_launch_process inline pour éviter l'appel de fonction)
+            if not self.stock.can_launch_process(process):
+                continue
+
+            # 2. Check rapide : Temps virtuel
+            if self.current_delay + process.delay > MAX_CYCLE_PER_MANAGER:
+                continue
+
+            # 3. Calcul du Score
+            # (Appel direct à ta logique de score dynamique)
+            score = self.__score_process(process)
+
+            # 4. Compétition
+            if score > best_score:
+                best_score = score
                 best_process = process
-                best_score = process_score
-        if best_score <= 0:
-            return None
-        return best_process
 
-    def __launch_processes(self) -> list[Process]:
-        """
-        Launches a batch of processes.
-        :return: None
-        """
-        launched_processes = []
-        launchable_processes = self.__get_launchable_processes()
+        # Si on a trouvé un gagnant
+        if best_process:
+            self.__launch_process(best_process)
+            return True
 
-
-        while launchable_processes and not is_time_up(self.end_timestamp):
-            process_to_launch = self.__get_process_to_launch(launchable_processes)
-            if process_to_launch is None:
-                break
-            self.__launch_process(process_to_launch)
-
-            # Keeps track of launched processes
-            launched_processes.append(process_to_launch)
-
-            # Gets new list of launchable processes
-            launchable_processes = self.__get_launchable_processes()
-        return launched_processes
+        return False
 
     def __get_launchable_processes(self) -> list[Process]:
         """
@@ -169,23 +187,30 @@ class Manager:
         If the process has inputs, subtracts them from the stock.
         :return: None
         """
-        heapq.heappush(self.processes_in_progress, (self.cycle + process.delay, id(process), process))
-        if process.inputs is not None:
-            for required_input, required_quantity in process.inputs.items():
-                self.stock.consume(required_input, required_quantity)
-        logger.debug("Generation [{}] - Manager [{}] - Launch process '{}'".format(self.gen_id, self.id, process.name))
+        if process.inputs:
+            for res, qty in process.inputs.items():
+                self.stock.consume(res, qty)
+        finish_time = self.current_delay + process.delay
+        heapq.heappush(self.processes_in_progress, (finish_time, id(process), process))
+        # logger.debug("Generation [{}] - Manager [{}] - Launch process '{}'".format(self.gen_id, self.id, process.name))
         if self.print_trace:
-            print(f"{self.cycle}:{process.name}")
+            print(f"{self.current_delay}:{process.name}")
 
     def __evaluate(self) -> None:
         """
         Evaluates the manager's score for this generation.
         :return: None
         """
-        for resource, quantity in self.stock.inventory.items():
-            if resource not in self.stock.resources_to_optimize:
-                self.score += self.weights.get(resource, 0) * quantity
-        self.score += self.nb_completed_processes
+        if self.current_delay == 0:
+            self.score = 1
+            return
+        self.score = 1
+        inventory_value = 0.0
+        for resource_name, quantity in self.stock.inventory.items():
+            if quantity > 0:
+                unit_value = self.resources_heatmap.get(resource_name, 0.0)
+                inventory_value += quantity * unit_value
+        self.score = (inventory_value * 1000) - self.current_delay
 
     def __reverse_weights(self) -> None:
         active_keys = [k for k in self.weights if k not in self.stock.resources_to_optimize]

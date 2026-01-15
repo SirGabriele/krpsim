@@ -11,7 +11,7 @@ class Stock:
     def clone(self) -> "Stock":
         new = Stock()
         new.inventory = self.inventory.copy()
-        new.resources_to_optimize = self.resources_to_optimize.copy()
+        new.resources_to_optimize = self.resources_to_optimize
         return new
 
     def add(self, resource: str, quantity: int) -> None:

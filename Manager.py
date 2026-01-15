@@ -14,6 +14,11 @@ from utils.is_time_up import is_time_up
 logger = logging.getLogger()
 
 class Manager:
+    __slots__ = ('id', 'gen_id', 'processes', 'weights', 'stock',
+                 'end_timestamp', 'processes_in_progress', 'score',
+                 'cycle', 'nb_completed_processes', 'print_trace',
+                 'random_seed', 'rng_seed', 'random_wait_uuid')
+
     def __init__(self,
                  manager_id: int,
                  gen_id: int,
@@ -107,23 +112,28 @@ class Manager:
         :return: None
         """
         launched_processes = []
-        launchable_processes = self.__get_launchable_processes()
+        candidates = [p for p in self.processes if self.stock.can_launch_process(p)]
+        wait_weight = self.weights[self.random_wait_uuid]
+        while candidates and not is_time_up(self.end_timestamp):
+            candidate_weights = [self.weights[p.name] for p in candidates]
 
-        while launchable_processes and not is_time_up(self.end_timestamp):
-            launchable_processes.append(None)
-            # Creates a list containing all weights of each launchable process
-            processes_weights = [self.weights.get(process.name, 0) if process is not None else self.weights[self.random_wait_uuid] for process in launchable_processes]
-            # Selects the process to launch among the launchable ones
-            process_to_launch = self.rng_seed.choices(population=launchable_processes, weights=processes_weights, k=1)[0]
+            current_population = candidates + [None]
+            current_weights = candidate_weights + [wait_weight]
+
+            process_to_launch = self.rng_seed.choices(
+                population=current_population,
+                weights=current_weights,
+                k=1
+            )[0]
+
             if process_to_launch is None:
                 break
-            self.__launch_process(process_to_launch)
 
-            # Keeps track of launched processes
+            self.__launch_process(process_to_launch)
             launched_processes.append(process_to_launch)
 
-            # Gets new list of launchable processes
-            launchable_processes = self.__get_launchable_processes()
+            candidates = [p for p in candidates if self.stock.can_launch_process(p)]
+
         return launched_processes
 
     def __get_launchable_processes(self) -> list[Process]:

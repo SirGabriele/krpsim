@@ -34,14 +34,7 @@ class Stock:
 
     def can_launch_process(self, process: Process) -> bool:
         if process.inputs is None:
-            return False
-
-        # This process does not require any input
-        if not process.inputs:
             return True
-
-        if process.inputs is None:
-            return False
 
         for input_name, input_amount in process.inputs.items():
             if input_name not in self.inventory or self.inventory[input_name] < input_amount:

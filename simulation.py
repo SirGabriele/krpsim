@@ -82,8 +82,7 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
     Starts the program's main loop.
     :return: None
     """
-    time_buffer = max(2.0, delay_max * 0.1)
-    end_timestamp = time.monotonic() + delay_max - time_buffer
+    end_timestamp = time.monotonic() + delay_max
 
     population = generate_population(size=POPULATION_SIZE, gen_id=1, stock=stock, processes=processes, end_timestamp=end_timestamp)
     top_five_percent = get_top_five_percent()
@@ -126,9 +125,7 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
 
             # Tri et logs
             sorted_population = sorted(population, key=lambda m: m.score, reverse=True)
-            logger.info(
-                "Generation [{}] - Score: {} | Duration: {:.2f}s | Stock : {}".format(generation_index, sorted_population[0].score,
-                                                                         gen_duration, sorted_population[0].stock.inventory))
+            print("Generation {} - Best score : {} | Final stock : {}\033[K".format(generation_index, sorted_population[0].score, sorted_population[0].stock.inventory), end="\r", flush=True)
 
             # Création génération suivante avec le timestamp ABSOLU
             population = next_generation(generation_index + 1, sorted_population, stock, processes,
@@ -142,7 +139,7 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
     # Resets its stock before running it again, this time with printing enabled
     end_timestamp = time.monotonic() + delay_max
     the_moat.reset(stock, end_timestamp)
-    the_moat.run(print_trace=False)
+    the_moat.run(print_trace=True)
 
     logger.info("Manager Of All Time - Generation {} - Best score : {} | Final stock : {}"
                 .format(generation_index, the_moat.score, the_moat.stock.inventory))

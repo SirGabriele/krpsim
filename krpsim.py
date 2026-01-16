@@ -1,5 +1,7 @@
 import logging
 import logging.config
+import time
+
 import kr_config
 import traceback
 import simulation
@@ -18,6 +20,7 @@ def logging_init(debug: bool):
     )
 
 def main() -> int:
+    start_of_program = time.monotonic()
     # Parser's configuration initialization
     parser = argparse_init()
     args = parser.parse_args()
@@ -29,9 +32,11 @@ def main() -> int:
     kr_config.DEBUG = args.debug
 
     delay = int(args.delay)
+    if delay <= 0:
+        raise ValueError("Delay must be greater than 0")
     stock, processes = parse(args.input_file)
-
-    simulation.start(stock, processes, delay)
+    end_timestamp = start_of_program + delay
+    simulation.start(stock, processes, end_timestamp)
 
     return 0
 

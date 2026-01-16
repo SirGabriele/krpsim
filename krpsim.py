@@ -32,6 +32,8 @@ def main() -> int:
     kr_config.DEBUG = args.debug
 
     delay = int(args.delay)
+    if delay <= 0:
+        raise ValueError("Delay must be greater than 0")
     stock, processes = parse(args.input_file)
     end_timestamp = start_of_program + delay
     simulation.start(stock, processes, end_timestamp)

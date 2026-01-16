@@ -5,7 +5,7 @@ import logging
 import random
 from uuid import uuid4
 
-from kr_config import MAX_COMPLETED_PROCESSES_PER_MANAGER, MAX_CYCLE_PER_MANAGER, MUTATION_RATE, OPTIMIZE_RESOURCE_SCORE
+from kr_config import MAX_CYCLE_PER_MANAGER, MUTATION_RATE, OPTIMIZE_RESOURCE_SCORE
 from process import Process
 from stock import Stock
 from utils.is_time_up import is_time_up
@@ -68,8 +68,7 @@ class Manager:
         and that time is not up.
         :return: None
         """
-        while ((self.nb_completed_processes <= MAX_COMPLETED_PROCESSES_PER_MANAGER and self.cycle <= MAX_CYCLE_PER_MANAGER)
-               and not is_time_up(self.end_timestamp)):
+        while self.cycle <= MAX_CYCLE_PER_MANAGER and not is_time_up(self.end_timestamp):
             completed_processes_count = self.__complete_processes()
             self.nb_completed_processes += completed_processes_count
             launched_processes = self.__launch_processes()

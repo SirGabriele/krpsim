@@ -16,7 +16,7 @@ logger = logging.getLogger()
 class Manager:
     __slots__ = ('id', 'gen_id', 'processes', 'weights', 'stock',
                  'end_timestamp', 'processes_in_progress', 'score',
-                 'cycle', 'nb_completed_processes', 'print_trace',
+                 'cycle', 'nb_completed_processes',
                  'random_seed', 'rng_seed', 'random_wait_uuid', 'trace')
 
     def __init__(self,
@@ -47,7 +47,6 @@ class Manager:
         self.score = 0
         self.cycle = 0
         self.nb_completed_processes = 0
-        self.print_trace = False
         self.__mutate()
 
     def reset(self, stock: Stock, end_timestamp: float) -> None:
@@ -63,13 +62,12 @@ class Manager:
         self.processes_in_progress = []
         self.end_timestamp = end_timestamp
 
-    def run(self, print_trace: bool = False) -> None:
+    def run(self) -> None:
         """
         Starts the manager's lifecycle. It lasts as long as it does not reach the maximum allowed actions or maximum allowed cycles
         and that time is not up.
         :return: None
         """
-        self.print_trace = print_trace
         #print("Generation [{}] - Manager [{}]".format(self.gen_id, self.id))
         while ((self.nb_completed_processes < MAX_COMPLETED_PROCESSES_PER_MANAGER and self.cycle < MAX_CYCLE_PER_MANAGER)
                and not is_time_up(self.end_timestamp)):
@@ -159,7 +157,7 @@ class Manager:
         # if self.print_trace:
             # print(f"{self.cycle}:{process.name}")
 
-    def print_trace_method(self):
+    def print_trace(self):
         """
         Prints the trace of the manager's execution.
         :return: None

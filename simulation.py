@@ -114,11 +114,7 @@ def start(stock: Stock, processes: list[Process], end_timestamp: float) -> None:
     # The Manager Of All Time
     the_moat = sorted_population[0]
     print()
-    # Resets its stock before running it again, this time with printing enabled
-    # end_timestamp = time.monotonic() + delay_max
-    # the_moat.reset(stock, end_timestamp)
-    # the_moat.run(print_trace=True)
-    the_moat.print_trace_method()
+    the_moat.print_trace()
 
     logger.info("Manager Of All Time - Generation {} - Best score : {} | Final stock : {}"
                 .format(generation_index, the_moat.score, the_moat.stock.inventory))

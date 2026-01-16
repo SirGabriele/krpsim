@@ -113,7 +113,7 @@ def start(stock: Stock, processes: list[Process], end_timestamp: float) -> None:
     sorted_population = sorted(population, key=lambda m: m.score, reverse=True)
     # The Manager Of All Time
     the_moat = sorted_population[0]
-
+    print()
     # Resets its stock before running it again, this time with printing enabled
     # end_timestamp = time.monotonic() + delay_max
     # the_moat.reset(stock, end_timestamp)

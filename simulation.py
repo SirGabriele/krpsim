@@ -77,12 +77,11 @@ def run_manager_simulation(manager: Manager) -> Manager:
     manager.run()
     return manager
 
-def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
+def start(stock: Stock, processes: list[Process], end_timestamp: float) -> None:
     """
     Starts the program's main loop.
     :return: None
     """
-    end_timestamp = time.monotonic() + delay_max
 
     population = generate_population(size=POPULATION_SIZE, gen_id=1, stock=stock, processes=processes, end_timestamp=end_timestamp)
     top_five_percent = get_top_five_percent()
@@ -116,9 +115,10 @@ def start(stock: Stock, processes: list[Process], delay_max: int) -> None:
     the_moat = sorted_population[0]
 
     # Resets its stock before running it again, this time with printing enabled
-    end_timestamp = time.monotonic() + delay_max
-    the_moat.reset(stock, end_timestamp)
-    the_moat.run(print_trace=True)
+    # end_timestamp = time.monotonic() + delay_max
+    # the_moat.reset(stock, end_timestamp)
+    # the_moat.run(print_trace=True)
+    the_moat.print_trace_method()
 
     logger.info("Manager Of All Time - Generation {} - Best score : {} | Final stock : {}"
                 .format(generation_index, the_moat.score, the_moat.stock.inventory))

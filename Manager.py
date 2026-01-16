@@ -17,7 +17,7 @@ class Manager:
     __slots__ = ('id', 'gen_id', 'processes', 'weights', 'stock',
                  'end_timestamp', 'processes_in_progress', 'score',
                  'cycle', 'nb_completed_processes', 'print_trace',
-                 'random_seed', 'rng_seed', 'random_wait_uuid')
+                 'random_seed', 'rng_seed', 'random_wait_uuid', 'trace')
 
     def __init__(self,
                  manager_id: int,
@@ -37,6 +37,7 @@ class Manager:
             if weights is None
             else weights
         )
+        self.trace = []
         self.weights[self.random_wait_uuid] = random.random()
         self.random_seed = random.randint(0, 100000)
         self.rng_seed = random.Random(self.random_seed)
@@ -153,8 +154,18 @@ class Manager:
         if process.inputs is not None:
             for required_input, required_quantity in process.inputs.items():
                 self.stock.consume(required_input, required_quantity)
-        if self.print_trace:
-            print(f"{self.cycle}:{process.name}")
+        self.trace.append((self.cycle, process.name))
+
+        # if self.print_trace:
+            # print(f"{self.cycle}:{process.name}")
+
+    def print_trace_method(self):
+        """
+        Prints the trace of the manager's execution.
+        :return: None
+        """
+        for cycle, process_name in self.trace:
+            print(f"{cycle}:{process_name}")
 
     def __evaluate(self) -> None:
         """

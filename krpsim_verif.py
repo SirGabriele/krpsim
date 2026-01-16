@@ -1,4 +1,3 @@
-import kr_config
 import traceback
 import sys
 import re
@@ -170,7 +169,7 @@ def main() -> int:
     exit_code = 0
     if not parsed_lines:
         print_final_info(0, stock.inventory)
-        return 1
+        return 0
 
     verifier = KrpSimVerifier(stock, processes)
     if not verifier.run(parsed_lines):

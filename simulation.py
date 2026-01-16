@@ -1,6 +1,5 @@
 import logging
 import random
-import time
 from multiprocessing import Pool
 from os import cpu_count
 

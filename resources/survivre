@@ -1,0 +1,24 @@
+#
+# ultra simple demo - krpsim
+#
+# stock      name:quantity
+annee:1
+cigarette:10
+euro:0
+temps:7000
+bien_etre:1
+#
+# process   name:(need1:qty1;need2:qty2;[...]):(result1:qty1;result2:qty2;[...]):delay
+#
+aller_travailler:(temps:70):(euro:70):70
+acheter_des_clopes:(euro:20;temps:10):(cigarette:10):10
+acheter_des_legumes:(euro:10;temps:10):(legume:10):10
+manger_sainement:(legume:10;temps:10):(annee:1):10
+fumer:(cigarette:10;annee:1;temps:10):(bien_etre:1):10
+faire_du_sport:(temps:20):(bien_etre:1):20
+etre_heureux:(bien_etre:1):(annee:1):1
+#
+# optimize:(stock1|time;stock2|time;[...])
+#
+optimize:(annee)
+#

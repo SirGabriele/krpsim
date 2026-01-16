@@ -34,7 +34,7 @@ def next_generation(gen_id: int, sorted_population: list[Manager], stock: Stock,
     score_min = min(managers_score)
     positive_manager_scores = []
     for manager_score in managers_score:
-        positive_manager_scores.append(manager_score + abs(score_min))
+        positive_manager_scores.append(manager_score + abs(score_min) + 1)
     for i in range(remaining_managers_to_generate):
         # Selects two random distinct managers to breed
         parent_one, parent_two = random.choices(sorted_population, weights=positive_manager_scores, k=2)

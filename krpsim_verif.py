@@ -2,6 +2,7 @@ import traceback
 import sys
 import re
 
+import kr_config
 from arg_parse.argparse_init import argparse_verif_init
 from custom_exceptions.NotEnoughResourcesError import NotEnoughResourcesError
 from custom_exceptions.ProcessNameNotFoundError import ProcessNameNotFoundError
@@ -68,7 +69,7 @@ class KrpSimVerifier:
         self.current_cycle = 0
         self.running_processes: list[tuple[int, Process]] = []  # (end_cycle, Process)
 
-    def _remove_from_stock(self, items: dict[str, int]):
+    def __remove_from_stock(self, items: dict[str, int]):
         """
         Remove items from stock.
         :param items: Items to remove with their quantities.
@@ -80,7 +81,7 @@ class KrpSimVerifier:
         for item, qty in items.items():
             self.stock.consume(item, qty)
 
-    def _add_to_stock(self, items: dict[str, int]):
+    def __add_to_stock(self, items: dict[str, int]):
         """
         Add items to stock.
         :param items: Items to add with their quantities.
@@ -92,7 +93,7 @@ class KrpSimVerifier:
         for item, qty in items.items():
             self.stock.add(item, qty)
 
-    def _does_stock_have_inputs(self, inputs: dict[str, int]) -> bool:
+    def __does_stock_have_inputs(self, inputs: dict[str, int]) -> bool:
         """
         Check if stock has enough quantity for all input items.
         :param inputs: Input items with their required quantities.
@@ -106,7 +107,7 @@ class KrpSimVerifier:
                 return False
         return True
 
-    def _complete_processes(self, cycle_limit: int):
+    def __complete_processes(self, cycle_limit: int):
         """
         Complete processes that finish at or before cycle_limit.
         :param cycle_limit: The cycle limit up to which processes should be completed.
@@ -115,7 +116,7 @@ class KrpSimVerifier:
         finished = [rp for rp in self.running_processes if rp[0] <= cycle_limit]
 
         for end_cycle, proc in finished:
-            self._add_to_stock(proc.outputs)
+            self.__add_to_stock(proc.outputs)
             self.running_processes.remove((end_cycle, proc))
 
     def run(self, parsed_lines: list[tuple[int, str]]) -> bool:
@@ -127,19 +128,19 @@ class KrpSimVerifier:
         try:
             for cycle, process_name in parsed_lines:
                 self.current_cycle = cycle
-                self._complete_processes(self.current_cycle)
+                self.__complete_processes(self.current_cycle)
                 process = next(p for p in self.processes if p.name == process_name)
-                if not self._does_stock_have_inputs(process.inputs):
+                if not self.__does_stock_have_inputs(process.inputs):
                     raise NotEnoughResourcesError(process_name, self.stock.inventory, process.inputs)
-                self._remove_from_stock(process.inputs)
+                self.__remove_from_stock(process.inputs)
                 end_cycle = self.current_cycle + process.delay
                 self.running_processes.append((end_cycle, process))
             if self.running_processes:
-                last_end_cycle = max(end for end, _ in self.running_processes)
-                if last_end_cycle > self.current_cycle:
-                    self.current_cycle = last_end_cycle
-                for _, proc in self.running_processes:
-                    self._add_to_stock(proc.outputs)
+                for end_cycle, proc in self.running_processes:
+                    if end_cycle > kr_config.MAX_CYCLE_PER_MANAGER:
+                        break
+                    self.current_cycle = end_cycle
+                    self.__add_to_stock(proc.outputs)
                 self.running_processes.clear()
             return True
         except Exception as e:

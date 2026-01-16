@@ -5,7 +5,7 @@ import logging
 import random
 from uuid import uuid4
 
-from kr_config import MAX_COMPLETED_PROCESSES_PER_MANAGER, MAX_CYCLE_PER_MANAGER, MUTATION_RATE
+from kr_config import MAX_COMPLETED_PROCESSES_PER_MANAGER, MAX_CYCLE_PER_MANAGER, MUTATION_RATE, OPTIMIZE_RESOURCE_SCORE
 from process import Process
 from stock import Stock
 from utils.is_time_up import is_time_up
@@ -153,9 +153,6 @@ class Manager:
                 self.stock.consume(required_input, required_quantity)
         self.trace.append((self.cycle, process.name))
 
-        # if self.print_trace:
-            # print(f"{self.cycle}:{process.name}")
-
     def print_trace(self):
         """
         Prints the trace of the manager's execution.
@@ -170,7 +167,7 @@ class Manager:
         :return: None
         """
         for resource in self.stock.resources_to_optimize:
-            self.score += self.stock.get_quantity(resource) * 100000
+            self.score += self.stock.get_quantity(resource) * OPTIMIZE_RESOURCE_SCORE
         self.score -= self.nb_completed_processes
         self.score -= self.cycle
 

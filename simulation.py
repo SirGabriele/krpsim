@@ -103,7 +103,8 @@ def start(stock: Stock, processes: list[Process], end_timestamp: float) -> None:
             population = managers_skipped + ran_managers
 
             sorted_population = sorted(population, key=lambda m: m.score, reverse=True)
-            print("Generation {} - Best score : {} | Final stock : {}\033[K".format(generation_index, sorted_population[0].score, sorted_population[0].stock.inventory), end="\r", flush=True)
+            best_manager = sorted_population[0]
+            print("Generation {} - Best score : {} | Resources to optimize : {}\033[K".format(generation_index, best_manager.score, {k: best_manager.stock.inventory[k] for k in best_manager.stock.resources_to_optimize if k in best_manager.stock.inventory}), end="\r", flush=True)
 
             population = next_generation(generation_index + 1, sorted_population, stock, processes,
                                          end_timestamp)
@@ -112,6 +113,7 @@ def start(stock: Stock, processes: list[Process], end_timestamp: float) -> None:
     sorted_population = sorted(population, key=lambda m: m.score, reverse=True)
     # The Manager Of All Time
     the_moat = sorted_population[0]
+    # Return to line before printing the trace
     print()
     the_moat.print_trace()
 

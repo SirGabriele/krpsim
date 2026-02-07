@@ -17,7 +17,7 @@ def argparse_init():
     parser.add_argument('input_file', type=existing_file, help='Path to the input file')
     parser.add_argument('delay', type=int, help='Numeric delay to not exceed')
     parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
-
+    parser.add_argument("--only-trace", action="store_true", help="Print only the trace of the simulation, without any additional information")
     return parser
 
 def argparse_verif_init():

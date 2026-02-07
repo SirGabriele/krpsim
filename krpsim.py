@@ -30,6 +30,7 @@ def main() -> int:
 
     # Handle debug mode so that the whole program has access to it
     kr_config.DEBUG = args.debug
+    kr_config.PRINT_ONLY_TRACE = args.only_trace
 
     delay = int(args.delay)
     if delay <= 0:

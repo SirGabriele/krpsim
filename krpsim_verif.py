@@ -137,7 +137,7 @@ class KrpSimVerifier:
                 self.running_processes.append((end_cycle, process))
             if self.running_processes:
                 for end_cycle, proc in self.running_processes:
-                    if end_cycle > kr_config.MAX_CYCLE_PER_MANAGER:
+                    if end_cycle >= kr_config.MAX_CYCLE_PER_MANAGER:
                         break
                     self.current_cycle = end_cycle
                     self.__add_to_stock(proc.outputs)

@@ -3,6 +3,7 @@ import random
 from multiprocessing import Pool
 from os import cpu_count
 
+import kr_config
 from kr_config import POPULATION_SIZE
 from process import Process
 from stock import Stock
@@ -104,7 +105,8 @@ def start(stock: Stock, processes: list[Process], end_timestamp: float) -> None:
 
             sorted_population = sorted(population, key=lambda m: m.score, reverse=True)
             best_manager = sorted_population[0]
-            print("Generation {} - Best score : {} | Resources to optimize : {}\033[K".format(generation_index, best_manager.score, {k: best_manager.stock.inventory[k] for k in best_manager.stock.resources_to_optimize if k in best_manager.stock.inventory}), end="\r", flush=True)
+            if not kr_config.PRINT_ONLY_TRACE:
+                print("Generation {} - Best score : {} | Resources to optimize : {}\033[K".format(generation_index, best_manager.score, {k: best_manager.stock.inventory[k] for k in best_manager.stock.resources_to_optimize if k in best_manager.stock.inventory}), end="\r", flush=True)
 
             population = next_generation(generation_index + 1, sorted_population, stock, processes,
                                          end_timestamp)
@@ -114,8 +116,10 @@ def start(stock: Stock, processes: list[Process], end_timestamp: float) -> None:
     # The Manager Of All Time
     the_moat = sorted_population[0]
     # Return to line before printing the trace
-    print()
+    if not kr_config.PRINT_ONLY_TRACE:
+        print()
     the_moat.print_trace()
 
-    logger.info("Manager Of All Time - Generation {} - Best score : {} | Final stock : {}"
-                .format(generation_index, the_moat.score, the_moat.stock.inventory))
+    if not kr_config.PRINT_ONLY_TRACE:
+        logger.info("Manager Of All Time - Generation {} - Best score : {} | Final stock : {} | Cycles : {}"
+                .format(generation_index, the_moat.score, the_moat.stock.inventory, the_moat.cycle))

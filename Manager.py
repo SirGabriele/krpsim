@@ -68,7 +68,7 @@ class Manager:
         and that time is not up.
         :return: None
         """
-        while self.cycle <= MAX_CYCLE_PER_MANAGER and not is_time_up(self.end_timestamp):
+        while self.cycle < MAX_CYCLE_PER_MANAGER and not is_time_up(self.end_timestamp):
             completed_processes_count = self.__complete_processes()
             self.nb_completed_processes += completed_processes_count
             launched_processes = self.__launch_processes()

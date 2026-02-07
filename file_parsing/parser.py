@@ -1,6 +1,7 @@
 import logging
 import re
 
+import kr_config
 from custom_exceptions.FileFormatError import FileFormatError
 from custom_exceptions.FileFormatOrderError import FileFormatOrderError
 from process import Process
@@ -67,7 +68,8 @@ def parse(input_file: str) -> tuple[Stock, list[Process]]:
     if not to_optimize:
         raise FileFormatOrderError()
 
-    display_config_file_data(len(processes), len(stock.inventory), len(stock.resources_to_optimize))
+    if not kr_config.PRINT_ONLY_TRACE:
+        display_config_file_data(len(processes), len(stock.inventory), len(stock.resources_to_optimize))
 
     return stock, processes
 
